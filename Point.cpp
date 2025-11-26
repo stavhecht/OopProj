@@ -1,4 +1,3 @@
-#include "console.h"
 #include "Point.h"
 #include "Screen.h"
 
