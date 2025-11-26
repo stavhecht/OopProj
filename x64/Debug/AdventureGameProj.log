@@ -1,0 +1,8 @@
+﻿  AdeventureGame.cpp
+  AdventureGameProj.cpp
+  Player.cpp
+  Point.cpp
+  Screen.cpp
+C:\Users\nurit\OneDrive\שולחן העבודה\מסמכים סתיו\OopProj\AdventureGameProj\Screen.cpp(6,14): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  Generating Code...
+  AdventureGameProj.vcxproj -> C:\Users\nurit\OneDrive\שולחן העבודה\מסמכים סתיו\OopProj\AdventureGameProj\x64\Debug\AdventureGameProj.exe

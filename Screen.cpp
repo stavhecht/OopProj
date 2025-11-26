@@ -1,4 +1,3 @@
-#include "console.h"
 #include "Screen.h"
 
 void Screen::draw() const {
