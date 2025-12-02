@@ -10,7 +10,7 @@ class Player {
 	Screen& screen;
 public:
 	// ctor gets start point and an array of 5 keys
-	Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& theScreen);
+	Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room);
 
 	// Existing parameterized constructor
 	void draw();
