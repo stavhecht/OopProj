@@ -11,12 +11,17 @@ class Point {
 
 public:
     Point() {}
+	Point(int x1, int y1) : x(x1), y(y1) {}
 
     Point(int x1, int y1, int diffx, int diffy, char c)
         : Point(x1, y1, diffx, diffy, c, Color::White) {}
 
     Point(int x1, int y1, int diffx, int diffy, char c, Color myColor)
         : x(x1), y(y1), diff_x(diffx), diff_y(diffy), ch(c), color(myColor) {}
+
+    Point(const Point& p)
+		: x(p.x), y(p.y), diff_x(p.diff_x), diff_y(p.diff_y), ch(p.ch), color(p.color) {
+	}
 
     void draw() {
         draw(ch);
