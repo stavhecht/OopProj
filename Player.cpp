@@ -1,9 +1,8 @@
 #include "Player.h"
 #include <cctype>
 
-Player::Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& theScreen)
-    : pos(point), screen(theScreen)
-{
+Player::Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room)
+    : pos(point), screen(room){
     for (int i = 0; i < NUM_KEYS; ++i) {
         keys[i] = the_keys[i];
     }
