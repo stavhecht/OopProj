@@ -13,7 +13,36 @@ void Player::draw() {
     pos.draw();
 }
 
-void Player::move() {
+
+void Player::pickUp() {
+	auto res = pos.ItemInRadios(screen, 1);
+	auto found = res.first;
+	auto itemPos = res.second;
+    if(inventory == nullptr && found) {
+        inventory = screen.getItem(itemPos);
+		screen.changePixelInRoom(itemPos, ' ');
+	}
+}
+
+void Player::dispose() {
+    if (inventory != nullptr) {
+        (*inventory).drop();
+		auto res = pos.PlaceToDrop(screen, 1);
+		auto found = res.first;
+		auto itemPos = res.second;
+        if (found) {
+            auto itempos  = inventory->getPos();
+            itempos = pos;
+			screen.changePixelInCurrBoard(itemPos, inventory->getCh());
+            inventory = nullptr;
+        }
+    }
+}
+
+
+
+
+void Player::move(){
     pos.draw(' ');
 
     // compute next position
@@ -21,7 +50,7 @@ void Player::move() {
     next.move();             
 
     // if next is a wall, stay; otherwise actually move
-    if (!screen.isWall(next)) {
+    if (!(screen.isWall(next) || screen.isItem(next))) {
         pos = next;
     }
     pos.draw();
@@ -31,8 +60,16 @@ void Player::handleKeyPressed(char key_pressed) {
     size_t index = 0;
     for (char k : keys) {
         if (std::tolower(k) == std::tolower(key_pressed)) {
-            pos.setDirection(static_cast<Direction>(index));
-            return;
+            if (k == 'o' || k == 'e') {
+                if (inventory == nullptr)
+                    pickUp();
+                else
+                    dispose();
+            }
+            else {
+                pos.setDirection(static_cast<Direction>(index));
+                return;
+            }
         }
         ++index;
     }

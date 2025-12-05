@@ -1,6 +1,7 @@
 #include "Point.h"
 #include "Screen.h"
 
+
 void Point::draw(char c) {
 	gotoxy(x, y);
 	set_color(color);
@@ -37,3 +38,32 @@ void Point::setDirection(Direction dir) {
 		break;
 	}
 }
+
+std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
+	for (int dy = -radius; dy <= radius; ++dy) {
+		for (int dx = -radius; dx <= radius; ++dx) {
+			int newX = (x + dx + Screen::MAX_X) % Screen::MAX_X;
+			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
+			Point targetPoint(newX, newY);
+			if (screen.isItem(targetPoint)) {
+				return std::make_pair(true, targetPoint);
+			}
+		}
+	}
+	return std::make_pair(false, Point(-1, -1));
+}
+
+std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
+	for (int dy = -radius; dy <= radius; ++dy) {
+		for (int dx = -radius; dx <= radius; ++dx) {
+			int newX = (x + dx + Screen::MAX_X) % Screen::MAX_X;
+			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
+			Point targetPoint(newX, newY);
+			if (screen.getCharAtcurrentBoard(targetPoint) == ' ') {
+				return std::make_pair(true, targetPoint);
+			}
+		}
+	}
+	return std::make_pair(false, Point(-1, -1));
+}
+

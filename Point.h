@@ -2,6 +2,9 @@
 
 #include "Console.h"
 #include "Direction.h"
+#include <utility>
+
+class Screen; // Forward declaration
 
 class Point {
     int x = 1, y = 1;
@@ -33,4 +36,9 @@ public:
 
     int getX() const { return x; }
     int getY() const { return y; }
+
+   
+    std::pair<bool, Point> ItemInRadios(Screen& screen, int radius) const;
+    std::pair<bool, Point> PlaceToDrop(Screen& screen, int radius) const;
+
 };

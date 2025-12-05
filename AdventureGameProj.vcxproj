@@ -129,6 +129,7 @@
   <ItemGroup>
     <ClCompile Include="AdeventureGame.cpp" />
     <ClCompile Include="AdventureGameProj.cpp" />
+    <ClCompile Include="Item.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Point.cpp" />
     <ClCompile Include="Screen.cpp" />
@@ -137,6 +138,7 @@
     <ClInclude Include="AdeventureGame.h" />
     <ClInclude Include="Console.h" />
     <ClInclude Include="Direction.h" />
+    <ClInclude Include="Item.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Point.h" />
     <ClInclude Include="Screen.h" />

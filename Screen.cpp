@@ -8,6 +8,14 @@
 #include <sstream>
 
 
+// Initialize buffers so currentBoard/currentRoom are populated.
+// Use setMenu() to populate currentBoard with the menu template on construction.
+Screen::Screen() {
+    setMenu();
+	setRoom1();
+    // Keep currentRoom empty until a room is selected (setRoomN will populate it).
+}
+
 void Screen::setScoreBoard() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], scoreBoard[i], MAX_X + 1);
@@ -89,7 +97,7 @@ void Screen::gobacktoMenu() {
             char key = static_cast<char>(get_single_char());
             if (key == 27) {
                 setMenu();
-                print();
+                printBoard();
                 return;
             }
         }
@@ -123,7 +131,7 @@ Screen::Screen(const Screen& other) {
 }
 
 // Function to print the current board to the console
-void Screen::print() const {
+void Screen::printBoard() const {
     // Move the cursor to the top-left corner
     system("cls");
 
@@ -135,6 +143,23 @@ void Screen::print() const {
     }
     // Print the last row without a newline after it
     std::cout << currentBoard[MAX_Y - 1];
+}
+
+void Screen::printRoom() const {
+    // Move the cursor to the top-left corner
+    system("cls");
+    set_color(Color::Yellow);
+
+    gotoxy(0, 0);
+
+    // Loop through all rows (except the last one) and print each line
+    for (int i = 0; i < MAX_Y - 1; i++) {
+        std::cout << currentRoom[i] << '\n';  // Print each row with a newline after it
+    }
+    // Print the last row without a newline after it
+    std::cout << currentRoom[MAX_Y - 1];
+    reset_color();
+
 }
 
 // Function to search for a specific character on the board delete if there are duplicates
@@ -180,17 +205,44 @@ Point Screen::searchChar(char c) const {
     return res;
 }
 
-void Screen::setRoom1() const {
-    set_color(Color::Yellow);
-    for (int i = 0; i < MAX_Y; ++i) {
-        gotoxy(0, i);
-        std::cout << gameRoom1[i] << std::flush;
+void Screen::setRoom1() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentRoom[i], gameRoom1[i], MAX_X + 1);  // Copy each row with an additional null terminator
     }
-    reset_color();
 }
 
-// Copy-assignment operator for Screen.
-// Performs deep copy for mutable char arrays and pointer-copy for boards (string literals).
+void Screen::setRoom2() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);  // Copy each row with an additional null terminator
+    }
+}
+
+void Screen::setRoom3() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);  // Copy each row with an additional null terminator
+    }
+}
+
+Item* Screen::getItem(const Point& p) {
+	int x = p.getX();
+	int y = p.getY();
+    if(x >= 0 && x < Screen::MAX_X && y >= 0 && y < Screen::MAX_Y) {
+        char ch = currentRoom[y][x];
+        switch (ch) {
+        case '@':
+            return new Item(p, '@'); // Example: Bomb
+        case '!':
+            return new Item(p, '!'); // Example: Torch
+        case 'K':
+            return new Item(p, 'K'); // Example: Key
+        default:
+			return nullptr; // No item found
+            }
+            
+        }
+}
+
+
 Screen& Screen::operator=(Screen const& other) {
     if (this == &other) {
         return *this;
