@@ -2,14 +2,15 @@
 
 #include <iostream>
 #include "Point.h"
+#include "Item.h"
 #include <vector>
 
 
 class Screen {
 public:
 	enum { MAX_X = 80, MAX_Y = 25 };
-	char currentBoard[MAX_Y][MAX_X + 1]; // +1 for null terminator
-	char currentRoom[MAX_Y][MAX_X + 1]; // +1 for null terminator
+	char currentBoard[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
+	char currentRoom[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
 private:
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -360,7 +361,9 @@ private:
 
 
 public:
-	Screen() {};
+	// Initialize screen buffers so currentBoard/currentRoom are in a known state.
+	Screen();
+
 	// Assignment operator
 	Screen& operator=(Screen const& other);
 
@@ -405,7 +408,10 @@ public:
 	//bool isScreenOk(int i);
 
 	// Prints the current board to the console
-	void print() const;
+	void printBoard() const;
+
+	void printRoom() const;
+
 
 	// Searches for a specific character on the board
 	Point searchChar(char ch) const;
@@ -434,9 +440,22 @@ public:
 	char getCharFromOriginalRoom(const Point& p) const {
 		return currentRoom[p.getY()][p.getX()];
 	}
-	void setRoom1() const;
+
+	Item* getItem(const Point& p);
+
+	// NOTE: these used to be const and only printed the templates directly to console.
+	// Make them non-const and copy templates into the mutable buffers so `printRoom` and
+	// other logic operate on populated `currentRoom` / `currentBoard`.
+	void setRoom1();
+	void setRoom2();
+	void setRoom3();
 
 	void gobacktoMenu();
+
+	bool isItem(const Point& p) const {
+		return (getCharFromOriginalRoom(p) == '@' || getCharFromOriginalRoom(p) == '*' || getCharFromOriginalRoom(p) == '/' ||
+			getCharFromOriginalRoom(p) == '\'' || getCharFromOriginalRoom(p) == 'K' || getCharFromOriginalRoom(p) == '?' || (getCharFromOriginalRoom(p) < '9' && getCharFromOriginalRoom(p) > '1'));
+	}
 
 	bool isWall(const Point& p) const {
 		return getCharFromOriginalRoom(p) == 'W';
