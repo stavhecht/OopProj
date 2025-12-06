@@ -57,21 +57,33 @@ void AdeventureGame::run() {
 		bool changeRoom = true;
 		int currentRoom = 1;
 
-        Point newStartPos1(10, 10, 1, 0, '$', Color::Red);
-        Point newStartPos2(15, 5, 0, 1, '&', Color::Green);
-
+		
+        //Point newStartPos1(10, 10, 1, 0, '$', Color::Red);
+        //Point newStartPos2(15, 5, 0, 1, '&', Color::Green);
 
         while (running) {
             if (changeRoom) {
                 // Set the correct room
                 if (currentRoom == 1) {
                     screen.setRoom1();
+          					Door door1 = Door(screen.searchChar('1'), '1', Color::Red);
+                    
+                    // do item spawns for room 1
                 }
                 else if (currentRoom == 2) {
                     screen.setRoom2();
+                    Point newStartPos1(31, 3, 1, 0, '$', Color::Red);
+                    Point newStartPos2(34, 3, 0, 1, '&', Color::Green);
+                    players[0].setPos(newStartPos1);
+                    players[1].setPos(newStartPos2);
                 }
                 else if (currentRoom == 3) {
                     screen.setRoom3();
+                    Point newStartPos1(2, 2, 1, 0, '$', Color::Red);
+                    Point newStartPos2(2, 4, 0, 1, '&', Color::Green);
+                    players[0].setPos(newStartPos1);
+                    players[1].setPos(newStartPos2);
+                    
                 }
                 else if (currentRoom > 3) {
                     // Game won!
@@ -82,8 +94,9 @@ void AdeventureGame::run() {
                 }
 
                 // Reset player positions for the new room
-                players[0].setPos(newStartPos1);
-                players[1].setPos(newStartPos2);
+                //players[0].setPos(newStartPos1);
+                //players[1].setPos(newStartPos2);
+                // items spawn in new room
 
                 screen.printRoom(); // Redraw the new room
                 changeRoom = false;
@@ -98,49 +111,66 @@ void AdeventureGame::run() {
             for (Player& p : players) {
                 char charAtPlayerPos = p.getScreen().getCharFromOriginalRoom(p.getPos());
 
-                // Check if the character is an exit/door (items '1', '2', '3')
+                // Check if the character is an exit/door (items '1'..'9')
                 if (charAtPlayerPos >= '1' && charAtPlayerPos <= '9') {
                     int doorNum = charAtPlayerPos - '0';
 
                     if (doorNum == currentRoom) {
-                        // Player reached the exit for the CURRENT room (e.g., reached '1' in Room 1)
-                        // This logic assumes door '1' leads out of room 1, '2' out of room 2, etc.
+                        // Player reached the exit for the CURRENT room
                         currentRoom++;
                         changeRoom = true;
-
-                        // We must break the inner loops to start the room change immediately
-                        running = false;
+                        // break out of player-for loop to allow changeRoom handling on next top-of-loop
                         break;
                     }
                 }
             }
 
-            if (!running) break; // Break out of the game loop to trigger room change or menu return
+            if (!running)
+                break; // Break out of the game loop to trigger menu/cleanup
 
-            // Input handling (Pause menu, etc. - unchanged)
+            // Input handling (Pause menu, etc.)
             if (check_kbhit()) {
                 char key = static_cast<char>(get_single_char());
                 if (key == ESC) {
                     Screen lastScreen = screen;
                     screen.setGamePaused();
                     screen.printBoard();
-                    char sub = static_cast<char>(get_single_char());
-                    if (sub == 'H' || sub == 'h') {
-                        running = false;
-                        break;
+
+                    // Wait for sub-key. Behavior requested:
+                    //  - sub == 'H' || 'h' => go back to menu (exit game loop)
+                    //  - sub == ESC         => restore lastScreen and resume
+                    //  - any other key      => remain at pause screen (ignored)
+                    bool requestMenu = false;
+                    bool requestUnpause = false;
+
+                    while (true) {
+                        char sub = static_cast<char>(get_single_char());
+                        if (sub == 'H' || sub == 'h') {
+                            requestMenu = true;
+                            break;
+                        }
+                        if (sub == ESC) {
+                            requestUnpause = true;
+                            break;
+                        }
+                        // ignore other keys - stay paused
                     }
-                    if (sub == ESC) {
+
+                    if (requestMenu) {
+                        // Exit the game loop so outer menu is shown
+                        running = false;
+                        break; // break the while(running) loop
+                    }
+
+                    if (requestUnpause) {
+                        // Restore previous screen and continue the game loop
                         screen = lastScreen;
                         screen.printRoom();
-                    }
-                    else {
-                        screen = lastScreen;
-                        for (auto& p : players) {
-                            p.handleKeyPressed(sub);
-                        }
+                        // do not break; resume normal processing next iteration
                     }
                 }
                 else {
+                    // Normal key handling for players
                     for (auto& p : players) {
                         p.handleKeyPressed(key);
                     }
@@ -150,8 +180,8 @@ void AdeventureGame::run() {
             sleep_ms(100);
         } // End while(running)
 
-        // If the game loop broke because of a room change (running is false, but exitApp is false)
-        // the outer loop will restart the game loop with the new nRoom/changeRoom state.
+        // If the game loop ended (running == false) control returns here and the outer
+        // while(!exitApp) will show the menu again (or exit if exitApp set).
     } // End while(!exitApp)
 
     // final cleanup

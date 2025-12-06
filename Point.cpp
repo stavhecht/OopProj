@@ -42,7 +42,7 @@ void Point::setDirection(Direction dir) {
 std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
-			int newX = (x + dx + Screen::MAX_X) % Screen::MAX_X;
+			int newX = (x + dx + Screen::MAX_X) % (Screen::MAX_X+1);
 			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
 			Point targetPoint(newX, newY);
 			if (screen.isItem(targetPoint)) {
@@ -56,7 +56,7 @@ std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
-			int newX = (x + dx + Screen::MAX_X) % Screen::MAX_X;
+			int newX = (x + dx + Screen::MAX_X) % (Screen::MAX_X+1);
 			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
 			Point targetPoint(newX, newY);
 			if (screen.getCharAtcurrentBoard(targetPoint) == ' ') {

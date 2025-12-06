@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Point.h"
-#include "Item.h"
+#include "CollectableItems.h"
 #include "Screen.h"
 
 class Player {
@@ -9,7 +9,7 @@ class Player {
 	Point pos;
 	char keys[NUM_KEYS];
 	Screen& screen;
-	Item* inventory = nullptr;
+	CollectableItems* inventory = nullptr;
 public:
 	// ctor gets start point and an array of 5 keys
 	Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room);
@@ -19,7 +19,14 @@ public:
 	void move();
 	void pickUp();
 	void dispose();
-	Item* getInventory() const { return inventory; }
+
+	// Return current inventory pointer (may be nullptr)
+	CollectableItems* getInventory() const { return inventory; }
+
+	// Take (remove) the inventory from the player and return it (player no longer owns it).
+	// Caller becomes responsible for the returned pointer. This is used when a door consumes a key.
+	CollectableItems* takeInventory();
+
 	void handleKeyPressed(char key);
 
 	Point getPos() const { return pos; }

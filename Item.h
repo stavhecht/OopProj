@@ -3,39 +3,27 @@
 #include "Point.h"
 #include <iostream>
 
+class Player;
+class Screen;
+
 class Item {
-	Point pos;
-	char ch;
-	bool isPicked = false;
-	Color color;
+protected:
+    Point pos;
+    char  ch;
+	Color color = Color::White;
 
 public:
-	// Single constructor with defaults for color and picked state.
-	Item(const Point& p, char c, Color col = Color::White, bool picked = false)
-		: pos(p), ch(c), color(col), isPicked(picked) {}
+    Item(const Point& p, char c, Color col) : pos(p), ch(c), color(col) {}
+    virtual ~Item() = default;
 
-	Point getPos() const { return pos; }
+    Point getPos() const { return pos; }
+    void  setPos(const Point& p) { pos = p; }
+    char  getCh() const { return ch; }
 
-	char getCh() const { return ch; }
-
-	bool getIsPicked() const { return isPicked; }
-
-	// Set picked state according to argument
-	void pickUp(bool picked) { isPicked = picked; }
-
-	// Draw the item using its own color at its position
-	void draw() {
-		if (!isPicked) {
-			gotoxy(pos.getX(), pos.getY());
-			set_color(color);
-			std::cout << ch << std::flush;
-			reset_color();
-		}
-	}
-
-	Item& drop() {
-		isPicked = false;
-		return *this;
-	}
+    // Called when something should happen:
+    virtual void onPickUp(Player& player, Screen& screen) {}
+    virtual void onDrop(Player& player, Screen& screen) {}
+    virtual void onStep(Player& player, Screen& screen) {}
 };
+
 
