@@ -13,17 +13,77 @@ void Player::draw() {
     pos.draw();
 }
 
+
+void Player::pickUp() {
+    auto res = pos.ItemInRadios(screen, 1);
+    bool found = res.first;
+    Point itemPos = res.second;
+
+    if (!found || inventory != nullptr)
+        return;
+
+    // get item from screen
+    CollectableItems* item = dynamic_cast<CollectableItems*>(screen.getItem(itemPos));
+    if (!item)
+        return;
+
+    inventory = item;
+
+    // remove from room 
+    screen.changePixelInRoom(itemPos, ' ');
+
+    // let item react
+    inventory->onPickUp(*this, screen);
+
+    screen.printRoom();
+}
+
+
+void Player::dispose() {
+    if (!inventory)
+        return;
+
+    auto res = pos.PlaceToDrop(screen, 1);
+    bool found = res.first;
+    Point dropPos = res.second;
+
+    if (!found)
+        return;
+
+    inventory->setPos(dropPos);
+    inventory->onDrop(*this, screen);
+
+    // draw dropped char
+    screen.changePixelInRoom(dropPos, inventory->getCh());
+    inventory = nullptr;
+    screen.printRoom();
+}
+
+CollectableItems* Player::takeInventory() {
+    CollectableItems* tmp = inventory;
+    inventory = nullptr;
+    return tmp;
+}
+
+
+
+
 void Player::move() {
+    // erase current
     pos.draw(' ');
 
-    // compute next position
+    // compute next
     Point next = pos;
-    next.move();             
+    next.move();
 
-    // if next is a wall, stay; otherwise actually move
-    if (!screen.isWall(next)) {
-        pos = next;
+    // block on walls/doors/items (like wall collision)
+    if (screen.isWall(next) || screen.isDoor(next) || screen.isItem(next)) {
+        // redraw current position and don't move
+        pos.draw();
+        return;
     }
+
+    pos = next;
     pos.draw();
 }
 
@@ -31,8 +91,16 @@ void Player::handleKeyPressed(char key_pressed) {
     size_t index = 0;
     for (char k : keys) {
         if (std::tolower(k) == std::tolower(key_pressed)) {
-            pos.setDirection(static_cast<Direction>(index));
-            return;
+            if (k == 'o' || k == 'e') {
+                if (inventory == nullptr)
+                    pickUp();
+                else
+                    dispose();
+            }
+            else {
+                pos.setDirection(static_cast<Direction>(index));
+                return;
+            }
         }
         ++index;
     }

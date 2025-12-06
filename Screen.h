@@ -2,28 +2,34 @@
 
 #include <iostream>
 #include "Point.h"
+#include "CollectableItems.h"
+#include "SteppedOnItems.h"
+#include "Console.h"
+#include "Door.h"
 #include <vector>
 
 
 class Screen {
 public:
 	enum { MAX_X = 80, MAX_Y = 25 };
-	char currentBoard[MAX_Y][MAX_X + 1]; // +1 for null terminator
-	char currentRoom[MAX_Y][MAX_X + 1]; // +1 for null terminator
+	char currentBoard[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
+	char currentRoom[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
 private:
+	std::vector<Item*> items;
+
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
 			"WWWWW               WWWWWWWWW                                          W    WWWW", // 2
-			"WWWWW                                                                  W    WWWW", // 3
+			"WWWWW                                                 K                W    WWWW", // 3
 			"WWWWW                                                                  W    WWWW", // 4
 			"WWWWW                                                                  W    WWWW", // 5
 			"WWWWW                                                                  W    WWWW", // 6
 			"WWWWW                                                                       WWWW", // 7
 			"WWWWW               WWWWWWWWW                                               WWWW", // 8
 			"WWWWW               WWWWWWWWW                                               WWWW", // 9
-			"                                                                                ", // 10
+			"                                                                              1 ", // 10
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 12
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 13
@@ -40,70 +46,68 @@ private:
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
+	// tabs removed and layout normalized; lines may be shorter than MAX_X but Screen::setRoomX will pad safely.
 	const char* gameRoom2[MAX_Y] = {
-		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"WWWWWWWWWWWWW	   WWWW					WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 1
-			"WWWWWWWWWWWWW	   WWWWW							WWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 2
-			"WWWWWWWWWWWWW	   WWWWW	 WW						WWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 3
-			"WWWWWWWWWWWWW	   WWWWW	 WW		    WW			WWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 4
-			"WWWWWWWWWWWWW	   WWWWWWWWWWWW         WW			WWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 5
-			"WWWWWWWWWWWWW	   WWWWWWWWWWWW       WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 6
-			"W				   WWWW							WWWW							W", // 7
-			"W												WWWW							W", // 8
-			"W												WWWW							W", // 9
-			"W       WW     WWWWWWWW                        WWWW                            W", // 10
-			"W	     WW		WWWWWWWW						WWWW							W", // 11
-			"W	     WW		WWWWWWWW						WWWW							W", // 12
-			"W		 WW		WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW			W", // 13
-			"W		 WW		WWWWWWWW											WWW			W", // 14
-			"W		 WW	WWWWWWWWWWWW											WWW			W", // 15
-			"W		 WWWWWWWWWWWWWWW											WWW	        W", // 16
-			"W		 WWWWWWWWWWWWWWW											WWW         W", // 17
-			"W					   W											WWW	        W", // 18
-			"W					   W 											WWW	        W", // 19
-			"W					   W											WWW	        W", // 20
-			"W					   WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW		    W", // 21
-			"W							WWW			WW				WW			 WW	        W", // 22
-			"W                          WWW         WW              WW           WW         W", // 23
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
+	//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
+		"WWWWWWWWWWWWW    WWWW                  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 1
+		"WWWWWWWWWWWWW    WWWWW                            WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 2
+		"WWWWWWWWWWWWW    WWWWW  WW                        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 3
+		"WWWWWWWWWWWWW    WWWWW  WW            WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 4
+		"WWWWWWWWWWWWW    WWWWWWWWWWWW         WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 5
+		"WWWWWWWWWWWWW    WWWWWWWWWWWW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 6
+		"W                   WWWW                            WWWW                       W", // 7
+		"W                                                   WWWW                       W", // 8
+		"W                                                   WWWW                       W", // 9
+		"W         WW        WWWWWWWW                        WWWW                       W", // 10
+		"W         WW        WWWWWWWW                        WWWW                       W", // 11
+		"W         WW        WWWWWWWW                        WWWW                       W", // 12
+		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 13
+		"W         WW        WWWWWWWW                        WWW              WWW       W", // 14
+		"W         WW  WWWWWWWWWWWWW                         WWW              WWW       W", // 15
+		"W         WWWWWWWWWWWWWWW                           WWW              W         W", // 16
+		"W         WWWWWWWWWWWWWWW                           WWW              W         W", // 17
+		"W                       W                           WWW              W         W", // 18
+		"W                       W                           WWW              W         W", // 19
+		"W                       W                           WWW              W         W", // 20
+		"W              2        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW         W", // 21
+		"W                            WWW            WW              WW                 W", // 22
+		"W                            WW        WW              WW           WW         W", // 23
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
-
-
+	
 	const char* gameRoom3[MAX_Y] = {
-		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"W																				W", // 1
-			"W																				W", // 2
-			"W																				W", // 3
-			"W																				W", // 4
-			"W																				W", // 5
-			"W																				W", // 6
-			"W																				W", // 7
-			"W																				W", // 8
-			"W																				W", // 9
-			"W                                                                              W", // 10
-			"W																				W", // 11
-			"W																				W", // 12
-			"W																				W", // 13
-			"W																				W", // 14
-			"W																				W", // 15
-			"W																		        W", // 16
-			"W																		        W", // 17
-			"W																		        W", // 18
-			"W																		        W", // 19
-			"W																		        W", // 20
-			"W																		        W", // 21
-			"W																		        W", // 22
-			"W                                                                              W", // 23
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
+	//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0 
+		"W                               W                                              W", // 1
+		"W  WWWWWWWWWWW  WWW      WWW   W   WWWWW   WWWWW   WWWW  W   WWWWWWWWWWWWWWW   W", // 2
+		"W  W        W   W        W     W   W   W       W     W   W   W             W   W", // 3
+		"W  W        W   WWWWWWW  W  WWWW   W   W  WWW  W  WWWW   W   W             W   W", // 4
+		"W  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW  W", // 5
+		"W                                                                              W", // 6
+		"W                                                                              W", // 7
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 8
+		"W                                                                              W", // 9
+		"W  W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W", // 10
+		"W  W   W   W   W   W   W   W       W   W   W       W       W       W   W       W", // 11
+		"W  W   WWWWW   WWWWW   WWWWW   WWWWW   WWW   WWWWW   WWWWW   WWWWW   WWWWW     W", // 12
+		"W  W                                                                           W", // 13
+		"W                                                                              W", // 14
+		"W                                                                              W", // 15
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 16
+		"W                                                                              W", // 17
+		"W                                                                              W", // 18
+		"W                                                                              W", // 19
+		"W                                                                              W", // 20
+		"W                                                                              W", // 21
+		"W                                                                              W", // 22
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 23
+		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24 
 	};
-
 
 
 	const char* winBoard[MAX_Y] = {
-		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
 		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
 		 "W==============================================================================W", // 1
 		 "W                                                                              W", // 2
@@ -112,15 +116,15 @@ private:
 		 "W                                                                              W", // 5
 		 "W                   ||    You Completed all the stages    ||                   W", // 6
 		 "W                                                                              W", // 7
-		 "W                                                                              W", // 9
-		 "W                                Your Score:                                  W", // 9
+		 "W                                                                              W", // 8
+		 "W                                Your Score:                                   W", // 9
 		 "W                                                                              W", // 10
 		 "W                                                                              W", // 11
 		 "W                                                                              W", // 12
 		 "W                                                                              W", // 13
 		 "W                                                                              W", // 14
 		 "W                                                                              W", // 15
-		 "W                                                                             W", // 16
+		 "W                                                                              W", // 16
 		 "W                                                                              W", // 17
 		 "W                                                                              W", // 18
 		 "W                                                                              W", // 19
@@ -214,6 +218,38 @@ private:
 		 "W==============================================================================W", // 23
 		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
+
+
+	const char* riddleBoard[MAX_Y] = {
+		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
+		 "????????????????????????????????????????????????????????????????????????????????", // 0
+		 "?==============================================================================?", // 1
+		 "?                                                                              ?", // 2
+		 "?                                                                              ?", // 3
+		 "?                                                                              ?", // 4
+		 "?                                                                              ?", // 5
+		 "?                          How many naz is this course?                        ?", // 6
+		 "?                                                                              ?", // 7
+		 "?                                                                              ?", // 9
+		 "?                                                                              ?", // 9
+		 "?                                                                              ?", // 10
+		 "?                                                                              ?", // 11
+		 "?                                                                              ?", // 12
+		 "?                                                                              ?", // 13
+		 "?                                                                              ?", // 14
+		 "?                                Answer:                                       ?", // 15
+		 "?                                                                              ?", // 16
+		 "?                                                                              ?", // 17
+		 "?                                                                              ?", // 18
+		 "?                                                                              ?", // 19
+		 "?                                                                              ?", // 20
+		 "?                                                                              ?", // 21
+		 "?                                                                              ?", // 22
+		 "?==============================================================================?", // 23
+		 "????????????????????????????????????????????????????????????????????????????????"  // 24
+	};
+
+
 	/*const char* endLoadBoard[MAX_Y] = {
 		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
 		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
@@ -360,40 +396,38 @@ private:
 
 
 public:
-	Screen() {};
-	// Assignment operator
+	Screen();
+
 	Screen& operator=(Screen const& other);
 
 	Screen(const Screen& other);
 
-	// Sets the current board to the score board state
-	void setScoreBoard();
+	
 
 	// choose screen
 	//int chooseRoom(std::vector<std::string> const, const int sumOfFiles);
-
-	// Sets the current board to the menu state
+	void setScoreBoard();
 	void setMenu();
-
-	// Sets the current board to the guide state
 	void setGuide();
-
-	// Sets the current board to the lose state
 	void setLose();
+	void setWin();
+	void setScreenError();
+	void setGamePaused();
+	void setRiddle();
 
+
+	void setRoom1();
+	void setRoom2();
+	void setRoom3();
 	// Sets the current board to the end load state
 	//void setEndLoad();
 
-	// Sets the current board to the win state
-	void setWin();
 
 	// Sets the current board to choose a screen state
 	//void setChooseScreen();
 
 	// Sets the current board to screen error state
-	void setScreenError();
-
-	void setGamePaused();
+	
 
 	// Sets the current board to no files Error state
 	//void setNoFilesError();
@@ -404,8 +438,9 @@ public:
 	// Checks if a screen is valid 
 	//bool isScreenOk(int i);
 
-	// Prints the current board to the console
-	void print() const;
+	void printBoard() const;
+	void printRoom() const;
+
 
 	// Searches for a specific character on the board
 	Point searchChar(char ch) const;
@@ -428,15 +463,40 @@ public:
 	}
 
 	char getCharAtcurrentBoard(const Point& p) const {
+		char c = currentBoard[p.getY()][p.getX()];
 		return currentBoard[p.getY()][p.getX()];
 	}
 
 	char getCharFromOriginalRoom(const Point& p) const {
 		return currentRoom[p.getY()][p.getX()];
 	}
-	void setRoom1() const;
+
+	// Returns a newly-allocated CollectableItems* if player picks up an item at `p`.
+	// The item is removed from the activeCollectables in the loaded room.
+	Item* getItem(const Point& p);
+	void  addItem(Item* item) { items.push_back(item); }
+
+
+	// Active items for the currently loaded room.
+	// Stored by value to avoid needing virtual destructor on Item.
+
+
+public:
+	
+
 
 	void gobacktoMenu();
+
+	bool isItem(const Point& p) const {
+		char c = getCharFromOriginalRoom(p);
+		return (c == '@' || c == '*' || c == '/' ||
+			c == '\'' || c == 'K' || c == '?');
+	}
+
+	bool isDoor(const Point& p) const {
+		char c = getCharFromOriginalRoom(p);
+		return (c >= '1' && c <= '9');
+	}
 
 	bool isWall(const Point& p) const {
 		return getCharFromOriginalRoom(p) == 'W';

@@ -1,4 +1,9 @@
 #include "Screen.h"
+#include "Console.h"
+#include "Torch.h"
+#include "Door.h"
+#include "Riddle.h"
+#include "Bomb.h"
 
 
 #include <cstring>
@@ -7,6 +12,14 @@
 #include <string>
 #include <sstream>
 
+
+// Initialize buffers so currentBoard/currentRoom are populated.
+// Use setMenu() to populate currentBoard with the menu template on construction.
+Screen::Screen() {
+    setMenu();
+	setRoom1();
+    // Keep currentRoom empty until a room is selected (setRoomN will populate it).
+}
 
 void Screen::setScoreBoard() {
     for (int i = 0; i < MAX_Y; i++) {
@@ -18,6 +31,12 @@ void Screen::setScoreBoard() {
 void Screen::setMenu() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], manuBoard[i], MAX_X + 1);
+    }
+}
+
+void Screen::setRiddle() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentBoard[i], riddleBoard[i], MAX_X + 1);
     }
 }
 
@@ -89,7 +108,7 @@ void Screen::gobacktoMenu() {
             char key = static_cast<char>(get_single_char());
             if (key == 27) {
                 setMenu();
-                print();
+                printBoard();
                 return;
             }
         }
@@ -123,7 +142,7 @@ Screen::Screen(const Screen& other) {
 }
 
 // Function to print the current board to the console
-void Screen::print() const {
+void Screen::printBoard() const {
     // Move the cursor to the top-left corner
     system("cls");
 
@@ -135,6 +154,23 @@ void Screen::print() const {
     }
     // Print the last row without a newline after it
     std::cout << currentBoard[MAX_Y - 1];
+}
+
+void Screen::printRoom() const {
+    // Move the cursor to the top-left corner
+    system("cls");
+
+    gotoxy(0, 0);
+    set_color(Color::Yellow);
+
+    // Loop through all rows (except the last one) and print each line
+    for (int i = 0; i < MAX_Y - 1; i++) {
+        std::cout << currentRoom[i] << '\n';  // Print each row with a newline after it
+    }
+    // Print the last row without a newline after it
+    std::cout << currentRoom[MAX_Y - 1];
+    reset_color();
+
 }
 
 // Function to search for a specific character on the board delete if there are duplicates
@@ -180,17 +216,206 @@ Point Screen::searchChar(char c) const {
     return res;
 }
 
-void Screen::setRoom1() const {
-    set_color(Color::Yellow);
-    for (int i = 0; i < MAX_Y; ++i) {
-        gotoxy(0, i);
-        std::cout << gameRoom1[i] << std::flush;
+void Screen::setRoom1() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentRoom[i], gameRoom1[i], MAX_X + 1);  // Copy each row with an additional null terminator
     }
-    reset_color();
+    items.clear();
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            char c = currentRoom[y][x];
+            Point pos(x, y);
+            switch (c) {
+            case '!': { // torch
+                auto* torch = new Torch(pos, '!', Color::Yellow);
+                addItem(torch);
+                break;
+            }
+            case 'K': { // key
+                auto* key = new CollectableItems(pos, 'K', Color::Green);
+                addItem(key);
+                break;
+            }
+            case '?': { // riddle tile
+                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
+                addItem(riddle);
+                break;
+            }
+            case '@': { // bomb
+                auto* bomb = new Bomb(pos, '@', Color::Red);
+                addItem(bomb);
+                break;
+            }
+            case '#': { // spring
+                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
+                addItem(spring);
+                break;
+            }
+            case '*': { // obstacle 
+                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
+                addItem(obstacle);
+                break;
+            }
+            case '/': { // switcher
+                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
+                addItem(switcher);
+                break;
+            }
+            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
+                auto* door = new Door(pos, c, Color::Red);
+                addItem(door);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
 }
 
-// Copy-assignment operator for Screen.
-// Performs deep copy for mutable char arrays and pointer-copy for boards (string literals).
+
+
+void Screen::setRoom2() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);  // Copy each row with an additional null terminator
+    }
+    items.clear();
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            char c = currentRoom[y][x];
+            Point pos(x, y);
+            switch (c) {
+            case '!': { // torch
+                auto* torch = new Torch(pos, '!', Color::Yellow);
+                addItem(torch);
+                break;
+            }
+            case 'K': { // key
+                auto* key = new CollectableItems(pos, 'K', Color::Green);
+                addItem(key);
+                break;
+            }
+            case '?': { // riddle tile
+                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
+                addItem(riddle);
+                break;
+            }
+            case '@': { // bomb
+                auto* bomb = new Bomb(pos, '@', Color::Red);
+                addItem(bomb);
+                break;
+            }
+            case '#': { // spring
+                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
+                addItem(spring);
+                break;
+            }
+            case '*': { // obstacle 
+                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
+                addItem(obstacle);
+                break;
+            }
+            case '/': { // switcher
+                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
+                addItem(switcher);
+                break;
+            }
+            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
+                auto* door = new Door(pos, c, Color::Red);
+                addItem(door);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
+}
+
+void Screen::setRoom3() {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);  // Copy each row with an additional null terminator
+    }
+    items.clear();
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            char c = currentRoom[y][x];
+            Point pos(x, y);
+            switch (c) {
+            case '!': { // torch
+                auto* torch = new Torch(pos, '!', Color::Yellow);
+                addItem(torch);
+                break;
+            }
+            case 'K': { // key
+                auto* key = new CollectableItems(pos, 'K', Color::Green);
+                addItem(key);
+                break;
+            }
+            case '?': { // riddle tile
+                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
+                addItem(riddle);
+                break;
+            }
+            case '@': { // bomb
+                auto* bomb = new CollectableItems(pos, '@', Color::Red);
+                addItem(bomb);
+                break;
+            }
+            case '#': { // spring
+                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
+                addItem(spring);
+                break;
+            }
+            case '*': { // obstacle 
+                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
+                addItem(obstacle);
+                break;
+            }
+            case '/': { // switcher
+                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
+                addItem(switcher);
+                break;
+            }
+            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
+                auto* door = new Door(pos, c, Color::Red);
+                addItem(door);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
+}
+
+
+
+Item* Screen::getItem(const Point& p) {
+    int x = p.getX();
+    int y = p.getY();
+
+    // First, check there is an item char at that position at all
+    char c = getCharFromOriginalRoom(p);
+    if (!isItem(p)) {
+        return nullptr;
+    }
+
+    // Then, find the matching Item object by position
+    for (Item* it : items) {
+        if (!it) continue;
+        Point ip = it->getPos();
+        if (ip.getX() == x && ip.getY() == y) {
+            return it;
+        }
+    }
+
+    return nullptr;
+}
+
+
+
+
 Screen& Screen::operator=(Screen const& other) {
     if (this == &other) {
         return *this;

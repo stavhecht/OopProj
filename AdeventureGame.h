@@ -5,8 +5,8 @@
 
 class AdeventureGame {
     enum { ESC = 27 };
-    Player players[2];
     Screen screen;
+    Player players[2];
 	
 
 public:
