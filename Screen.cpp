@@ -116,7 +116,7 @@ void Screen::gobacktoMenu() {
     }
 }
 
-// Copy constructor for Screen — performs deep copy of mutable buffers and pointer copy
+// Copy constructor for Screen â€” performs deep copy of mutable buffers and pointer copy
 Screen::Screen(const Screen& other) {
     // copy mutable character buffers
     for (int i = 0; i < MAX_Y; ++i) {
@@ -124,7 +124,7 @@ Screen::Screen(const Screen& other) {
         std::memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
     }
 
-    // copy the pointer-based template boards (string literals) — shallow copy of pointers is correct
+    // copy the pointer-based template boards (string literals) â€” shallow copy of pointers is correct
     for (int i = 0; i < MAX_Y; ++i) {
         gameRoom1[i] = other.gameRoom1[i];
         gameRoom2[i] = other.gameRoom2[i];

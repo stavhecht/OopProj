@@ -66,7 +66,7 @@ void AdeventureGame::run() {
                 // Set the correct room
                 if (currentRoom == 1) {
                     screen.setRoom1();
-					Door door1 = Door(screen.searchChar('1'), '1', Color::Red);
+          					Door door1 = Door(screen.searchChar('1'), '1', Color::Red);
                     
                     // do item spawns for room 1
                 }
