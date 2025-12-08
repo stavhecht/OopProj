@@ -10,6 +10,11 @@ class Riddle: public SteppedOnItems{
 	public:
 	Riddle(const Point& p, char c = '?', Color col = Color::LightAqua) : SteppedOnItems(p, c, col) {}
 
+	Riddle(const Riddle&) = default;
+	Riddle& operator=(const Riddle&) = default;
+
 	void onStep(Player& player, Screen& screen) override;
+
+	virtual Item* clone() const override { return new Riddle(*this); }
 };
 

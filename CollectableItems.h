@@ -9,6 +9,9 @@ public:
         : Item(p, c, col) {
     }
 
+    CollectableItems(const CollectableItems&) = default;
+    CollectableItems& operator=(const CollectableItems&) = default;
+
     bool isPicked() const { return picked; }
 
     virtual void onPickUp(Player& player, Screen& screen) override {
@@ -20,4 +23,6 @@ public:
         picked = false;
         // maybe nothing else
     }
+
+    virtual Item* clone() const override { return new CollectableItems(*this); }
 };

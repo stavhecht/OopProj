@@ -397,6 +397,8 @@ private:
 
 public:
 	Screen();
+	~Screen();
+
 
 	Screen& operator=(Screen const& other);
 
@@ -416,9 +418,10 @@ public:
 	void setRiddle();
 
 
-	void setRoom1();
-	void setRoom2();
-	void setRoom3();
+	void setRoom(int nRoom);
+	//void setRoom2();
+	//void setRoom3();
+	// 
 	// Sets the current board to the end load state
 	//void setEndLoad();
 
@@ -463,13 +466,23 @@ public:
 	}
 
 	char getCharAtcurrentBoard(const Point& p) const {
-		char c = currentBoard[p.getY()][p.getX()];
 		return currentBoard[p.getY()][p.getX()];
 	}
 
-	char getCharFromOriginalRoom(const Point& p) const {
+	// Return the visible character at a room location. If a live Item occupies the tile
+	// return its character; otherwise return the template char.
+	char getCharAtcurrentRoom(const Point& p) const {
+		// Check active items first
+		for (Item* it : items) {
+			if (!it) continue;
+			Point ip = it->getPos();
+			if (ip.getX() == p.getX() && ip.getY() == p.getY())
+				return it->getCh();
+		}
+		// Fallback to template char
 		return currentRoom[p.getY()][p.getX()];
 	}
+
 
 	// Returns a newly-allocated CollectableItems* if player picks up an item at `p`.
 	// The item is removed from the activeCollectables in the loaded room.
@@ -488,18 +501,37 @@ public:
 	void gobacktoMenu();
 
 	bool isItem(const Point& p) const {
-		char c = getCharFromOriginalRoom(p);
+		// Check active items first
+		for (Item* it : items) {
+			if (!it) continue;
+			Point ip = it->getPos();
+			if (ip.getX() == p.getX() && ip.getY() == p.getY())
+				return true;
+		}
+		// Fallback to template char
+		char c = currentRoom[p.getY()][p.getX()];
 		return (c == '@' || c == '*' || c == '/' ||
 			c == '\'' || c == 'K' || c == '?');
 	}
 
 	bool isDoor(const Point& p) const {
-		char c = getCharFromOriginalRoom(p);
+		// Check active items for Door
+		for (Item* it : items) {
+			if (!it) continue;
+			Door* d = dynamic_cast<Door*>(it);
+			if (d) {
+				Point ip = d->getPos();
+				if (ip.getX() == p.getX() && ip.getY() == p.getY())
+					return true;
+			}
+		}
+		// Fallback to template char
+		char c = currentRoom[p.getY()][p.getX()];
 		return (c >= '1' && c <= '9');
 	}
 
 	bool isWall(const Point& p) const {
-		return getCharFromOriginalRoom(p) == 'W';
+		return getCharAtcurrentRoom(p) == 'W';
 	}
 };
 

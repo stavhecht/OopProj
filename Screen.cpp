@@ -17,8 +17,14 @@
 // Use setMenu() to populate currentBoard with the menu template on construction.
 Screen::Screen() {
     setMenu();
-	setRoom1();
     // Keep currentRoom empty until a room is selected (setRoomN will populate it).
+}
+
+Screen::~Screen() {
+    for (Item* it : items) {
+        delete it;
+    }
+    items.clear();
 }
 
 void Screen::setScoreBoard() {
@@ -116,7 +122,7 @@ void Screen::gobacktoMenu() {
     }
 }
 
-// Copy constructor for Screen â€” performs deep copy of mutable buffers and pointer copy
+// Copy constructor for Screen — performs deep copy of mutable buffers and pointer copy
 Screen::Screen(const Screen& other) {
     // copy mutable character buffers
     for (int i = 0; i < MAX_Y; ++i) {
@@ -124,7 +130,7 @@ Screen::Screen(const Screen& other) {
         std::memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
     }
 
-    // copy the pointer-based template boards (string literals) â€” shallow copy of pointers is correct
+    // copy the pointer-based template boards (string literals) — shallow copy of pointers is correct
     for (int i = 0; i < MAX_Y; ++i) {
         gameRoom1[i] = other.gameRoom1[i];
         gameRoom2[i] = other.gameRoom2[i];
@@ -138,6 +144,12 @@ Screen::Screen(const Screen& other) {
         manuBoard[i] = other.manuBoard[i];
         guideBoard[i] = other.guideBoard[i];
         gamePaused[i] = other.gamePaused[i];
+    }
+
+    // deep-copy items
+    items.clear();
+    for (Item* it : other.items) {
+        if (it) items.push_back(it->clone());
     }
 }
 
@@ -171,6 +183,11 @@ void Screen::printRoom() const {
     std::cout << currentRoom[MAX_Y - 1];
     reset_color();
 
+    for (Item* it : items) {
+        if (it) {
+            it->draw();
+        }
+    }
 }
 
 // Function to search for a specific character on the board delete if there are duplicates
@@ -216,11 +233,32 @@ Point Screen::searchChar(char c) const {
     return res;
 }
 
-void Screen::setRoom1() {
-    for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentRoom[i], gameRoom1[i], MAX_X + 1);  // Copy each row with an additional null terminator
+void Screen::setRoom(int nRoom) {
+    switch (nRoom)
+    {
+    case 1:
+    {
+        for (int i = 0; i < MAX_Y; i++)
+            memcpy(currentRoom[i], gameRoom1[i], MAX_X + 1);  // Copy each row with an additional null terminator
+		break;
     }
+    case 2:
+    {
+        for (int i = 0; i < MAX_Y; i++)
+            memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);  
+	}   break;
+    case 3:
+    {
+        for (int i = 0; i < MAX_Y; i++)
+            memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);  
+		break;
+	}
+    default:
+        break;
+    }
+
     items.clear();
+
     for (int y = 0; y < MAX_Y; ++y) {
         for (int x = 0; x < MAX_X; ++x) {
             char c = currentRoom[y][x];
@@ -229,41 +267,51 @@ void Screen::setRoom1() {
             case '!': { // torch
                 auto* torch = new Torch(pos, '!', Color::Yellow);
                 addItem(torch);
+                changePixelInRoom(pos, ' ');
+				torch->draw();
                 break;
             }
             case 'K': { // key
                 auto* key = new CollectableItems(pos, 'K', Color::Green);
                 addItem(key);
+                changePixelInRoom(pos, ' ');
                 break;
             }
             case '?': { // riddle tile
                 auto* riddle = new Riddle(pos, '?', Color::LightAqua);
                 addItem(riddle);
+                changePixelInRoom(pos, ' ');
                 break;
             }
             case '@': { // bomb
                 auto* bomb = new Bomb(pos, '@', Color::Red);
                 addItem(bomb);
+                changePixelInRoom(pos, ' ');
                 break;
             }
             case '#': { // spring
                 auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
                 addItem(spring);
+                changePixelInRoom(pos, ' ');
                 break;
             }
             case '*': { // obstacle 
                 auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
                 addItem(obstacle);
+                changePixelInRoom(pos, ' ');
                 break;
             }
             case '/': { // switcher
                 auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
                 addItem(switcher);
+                changePixelInRoom(pos, ' ');
                 break;
             }
             case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
                 auto* door = new Door(pos, c, Color::Red);
                 addItem(door);
+                // remove template char since door is now a live object
+                changePixelInRoom(pos, ' ');
                 break;
             }
             default:
@@ -275,119 +323,7 @@ void Screen::setRoom1() {
 
 
 
-void Screen::setRoom2() {
-    for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);  // Copy each row with an additional null terminator
-    }
-    items.clear();
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
-            char c = currentRoom[y][x];
-            Point pos(x, y);
-            switch (c) {
-            case '!': { // torch
-                auto* torch = new Torch(pos, '!', Color::Yellow);
-                addItem(torch);
-                break;
-            }
-            case 'K': { // key
-                auto* key = new CollectableItems(pos, 'K', Color::Green);
-                addItem(key);
-                break;
-            }
-            case '?': { // riddle tile
-                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
-                addItem(riddle);
-                break;
-            }
-            case '@': { // bomb
-                auto* bomb = new Bomb(pos, '@', Color::Red);
-                addItem(bomb);
-                break;
-            }
-            case '#': { // spring
-                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
-                addItem(spring);
-                break;
-            }
-            case '*': { // obstacle 
-                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
-                addItem(obstacle);
-                break;
-            }
-            case '/': { // switcher
-                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
-                addItem(switcher);
-                break;
-            }
-            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
-                auto* door = new Door(pos, c, Color::Red);
-                addItem(door);
-                break;
-            }
-            default:
-                break;
-            }
-        }
-    }
-}
 
-void Screen::setRoom3() {
-    for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);  // Copy each row with an additional null terminator
-    }
-    items.clear();
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
-            char c = currentRoom[y][x];
-            Point pos(x, y);
-            switch (c) {
-            case '!': { // torch
-                auto* torch = new Torch(pos, '!', Color::Yellow);
-                addItem(torch);
-                break;
-            }
-            case 'K': { // key
-                auto* key = new CollectableItems(pos, 'K', Color::Green);
-                addItem(key);
-                break;
-            }
-            case '?': { // riddle tile
-                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
-                addItem(riddle);
-                break;
-            }
-            case '@': { // bomb
-                auto* bomb = new CollectableItems(pos, '@', Color::Red);
-                addItem(bomb);
-                break;
-            }
-            case '#': { // spring
-                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
-                addItem(spring);
-                break;
-            }
-            case '*': { // obstacle 
-                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
-                addItem(obstacle);
-                break;
-            }
-            case '/': { // switcher
-                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
-                addItem(switcher);
-                break;
-            }
-            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
-                auto* door = new Door(pos, c, Color::Red);
-                addItem(door);
-                break;
-            }
-            default:
-                break;
-            }
-        }
-    }
-}
 
 
 
@@ -395,21 +331,28 @@ Item* Screen::getItem(const Point& p) {
     int x = p.getX();
     int y = p.getY();
 
-    // First, check there is an item char at that position at all
-    char c = getCharFromOriginalRoom(p);
-    if (!isItem(p)) {
-        return nullptr;
-    }
-
-    // Then, find the matching Item object by position
-    for (Item* it : items) {
-        if (!it) continue;
-        Point ip = it->getPos();
+    // Find a collectable item at the given position in the active items list.
+    for (auto it = items.begin(); it != items.end(); ++it) {
+        Item* item = *it;
+        if (!item) continue;
+        Point ip = item->getPos();
         if (ip.getX() == x && ip.getY() == y) {
-            return it;
+            // Only CollectableItems can be picked up by player.
+            CollectableItems* ci = dynamic_cast<CollectableItems*>(item);
+            if (ci) {
+                // transfer ownership: remove from screen list and return the pointer
+                items.erase(it);
+                // ensure room template doesn't still contain the character
+                changePixelInRoom(ip, ' ');
+                return ci;
+            } else {
+                // not collectable
+                return nullptr;
+            }
         }
     }
 
+    // fallback: if template still contains an item char, return nullptr (no live object)
     return nullptr;
 }
 
@@ -420,6 +363,12 @@ Screen& Screen::operator=(Screen const& other) {
     if (this == &other) {
         return *this;
     }
+
+    // delete existing items owned by this
+    for (Item* it : items) {
+        delete it;
+    }
+    items.clear();
 
     // copy mutable boards (char buffers)
     for (int i = 0; i < MAX_Y; ++i) {
@@ -441,6 +390,11 @@ Screen& Screen::operator=(Screen const& other) {
         manuBoard[i] = other.manuBoard[i];
         guideBoard[i] = other.guideBoard[i];
         gamePaused[i] = other.gamePaused[i];
+    }
+
+    // deep-copy items
+    for (Item* it : other.items) {
+        if (it) items.push_back(it->clone());
     }
 
     return *this;

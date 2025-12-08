@@ -1,8 +1,10 @@
 #include "Point.h"
 #include "Screen.h"
+#include "Item.h" // full Item definition needed for operator=
 
+#include <iostream>
 
-void Point::draw(char c) {
+void Point::draw(char c) const {
 	gotoxy(x, y);
 	set_color(color);
 	std::cout << c << std::flush;
@@ -39,11 +41,20 @@ void Point::setDirection(Direction dir) {
 	}
 }
 
+// Copy only appearance (glyph + color) from Item into this Point.
+// Note: preserves this Point's x/y — intended for "apply item's look to a coordinate".
+Point& Point::operator=(const Item& item) {
+    Point ip = item.getPos(); // use item's internal point for glyph/color
+    ch = ip.getCh();
+    color = ip.getColor();
+    return *this;
+}
+
 std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
-			int newX = (x + dx + Screen::MAX_X) % (Screen::MAX_X+1);
-			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
+			int newX = x + dx;
+			int newY = y + dy;
 			Point targetPoint(newX, newY);
 			if (screen.isItem(targetPoint)) {
 				return std::make_pair(true, targetPoint);
@@ -56,10 +67,10 @@ std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
-			int newX = (x + dx + Screen::MAX_X) % (Screen::MAX_X+1);
-			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
+			int newX = x + dx;
+			int newY = y + dy;
 			Point targetPoint(newX, newY);
-			if (screen.getCharAtcurrentBoard(targetPoint) == ' ') {
+			if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
 				return std::make_pair(true, targetPoint);
 			}
 		}

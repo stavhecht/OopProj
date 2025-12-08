@@ -17,7 +17,7 @@ void Torch::torchEffect(Screen& screen, const Point& center, int radius) {
             int dy = y - cy;
             if (dx*dx + dy*dy <= radius*radius) {
                 Point p(x, y);
-                screen.changePixelInCurrBoard(p, screen.getCharFromOriginalRoom(p));
+                screen.changePixelInCurrBoard(p, screen.getCharAtcurrentRoom(p));
             }
         }
     }

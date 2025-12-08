@@ -45,16 +45,21 @@ void Player::dispose() {
 
     auto res = pos.PlaceToDrop(screen, 1);
     bool found = res.first;
-    Point dropPos = res.second;
-
     if (!found)
         return;
+
+    Point dropPos = res.second;
+
+    // copy appearance (glyph + color) from the inventory into dropPos
+    // this uses Point::operator=(const Item&), which preserves dropPos coordinates
+    dropPos = *inventory;
 
     inventory->setPos(dropPos);
     inventory->onDrop(*this, screen);
 
-    // draw dropped char
-    screen.changePixelInRoom(dropPos, inventory->getCh());
+    // return ownership to screen so it becomes an active item again
+    screen.addItem(inventory);
+
     inventory = nullptr;
     screen.printRoom();
 }

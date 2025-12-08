@@ -58,27 +58,28 @@ void AdeventureGame::run() {
 		int currentRoom = 1;
 
 		
-        //Point newStartPos1(10, 10, 1, 0, '$', Color::Red);
-        //Point newStartPos2(15, 5, 0, 1, '&', Color::Green);
+        
 
         while (running) {
             if (changeRoom) {
                 // Set the correct room
                 if (currentRoom == 1) {
-                    screen.setRoom1();
-          					Door door1 = Door(screen.searchChar('1'), '1', Color::Red);
-                    
+                    screen.setRoom(currentRoom);
+                    Point newStartPos1(10, 10, 1, 0, '$', Color::Red);
+                    Point newStartPos2(15, 5, 0, 1, '&', Color::Green);
+                    players[0].setPos(newStartPos1);
+                    players[1].setPos(newStartPos2);
                     // do item spawns for room 1
                 }
                 else if (currentRoom == 2) {
-                    screen.setRoom2();
+                    screen.setRoom(currentRoom);
                     Point newStartPos1(31, 3, 1, 0, '$', Color::Red);
                     Point newStartPos2(34, 3, 0, 1, '&', Color::Green);
                     players[0].setPos(newStartPos1);
                     players[1].setPos(newStartPos2);
                 }
                 else if (currentRoom == 3) {
-                    screen.setRoom3();
+                    screen.setRoom(currentRoom);
                     Point newStartPos1(2, 2, 1, 0, '$', Color::Red);
                     Point newStartPos2(2, 4, 0, 1, '&', Color::Green);
                     players[0].setPos(newStartPos1);
@@ -109,7 +110,7 @@ void AdeventureGame::run() {
 
             // CHECK FOR ROOM TRANSITION AFTER MOVEMENT
             for (Player& p : players) {
-                char charAtPlayerPos = p.getScreen().getCharFromOriginalRoom(p.getPos());
+                char charAtPlayerPos = p.getScreen().getCharAtcurrentRoom(p.getPos());
 
                 // Check if the character is an exit/door (items '1'..'9')
                 if (charAtPlayerPos >= '1' && charAtPlayerPos <= '9') {
@@ -132,13 +133,12 @@ void AdeventureGame::run() {
             if (check_kbhit()) {
                 char key = static_cast<char>(get_single_char());
                 if (key == ESC) {
-                    Screen lastScreen = screen;
                     screen.setGamePaused();
                     screen.printBoard();
 
                     // Wait for sub-key. Behavior requested:
                     //  - sub == 'H' || 'h' => go back to menu (exit game loop)
-                    //  - sub == ESC         => restore lastScreen and resume
+                    //  - sub == ESC         => restore view and resume (do NOT assign screen; just redraw)
                     //  - any other key      => remain at pause screen (ignored)
                     bool requestMenu = false;
                     bool requestUnpause = false;
@@ -163,10 +163,12 @@ void AdeventureGame::run() {
                     }
 
                     if (requestUnpause) {
-                        // Restore previous screen and continue the game loop
-                        screen = lastScreen;
+                        // Simply redraw current game room and resume.
+                        // We DO NOT assign a saved Screen snapshot back into `screen` because that can reintroduce items
+                        // that were removed while playing. `screen.printRoom()` will use the live `items` vector and
+                        // `currentRoom` buffer (which haven't been overwritten by setGamePaused()) to correctly redraw.
                         screen.printRoom();
-                        // do not break; resume normal processing next iteration
+                        // continue the game loop normally
                     }
                 }
                 else {
