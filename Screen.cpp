@@ -52,7 +52,6 @@ void Screen::setGamePaused() {
     }
 }
 
-
 // Function to set the board to the screen state from a file
 void Screen::fixBoard() {
     for (int i = 0; i < MAX_Y; i++) {
@@ -234,6 +233,15 @@ Point Screen::searchChar(char c) const {
 }
 
 void Screen::setRoom(int nRoom) {
+    // clear opened doors for the new room
+    clearOpenedDoors();
+
+    // Delete any existing live items before loading a new room to avoid dangling pointers/leaks
+    for (Item* it : items) {
+        delete it;
+    }
+    items.clear();
+
     switch (nRoom)
     {
     case 1:
@@ -257,8 +265,7 @@ void Screen::setRoom(int nRoom) {
         break;
     }
 
-    items.clear();
-
+    // populate live items from template
     for (int y = 0; y < MAX_Y; ++y) {
         for (int x = 0; x < MAX_X; ++x) {
             char c = currentRoom[y][x];
@@ -308,12 +315,12 @@ void Screen::setRoom(int nRoom) {
                 break;
             }
             case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
-                auto* door = new Door(pos, c, Color::Red);
-                addItem(door);
-                // remove template char since door is now a live object
-                changePixelInRoom(pos, ' ');
-                break;
-            }
+                 auto* door = new Door(pos, c, Color::Red);
+                 addItem(door);
+                 // remove template char since door is now a live object
+                 changePixelInRoom(pos, ' ');
+                 break;
+             }
             default:
                 break;
             }
@@ -321,9 +328,36 @@ void Screen::setRoom(int nRoom) {
     }
 }
 
+Item* Screen::peekItemAt(const Point& p) const {
+    int x = p.getX();
+    int y = p.getY();
+
+    for (Item* it : items) {
+        if (!it) continue;
+        Point ip = it->getPos();
+        if (ip.getX() == x && ip.getY() == y)
+            return it;
+    }
+    return nullptr;
+}
 
 
 
+bool Screen::removeItemAt(const Point & p) {
+    for (auto it = items.begin(); it != items.end(); ++it) {
+        Item * item = *it;
+        if (!item) continue;
+        Point ip = item->getPos();
+        if (ip.getX() == p.getX() && ip.getY() == p.getY()) {
+            delete item;
+            items.erase(it);
+            return true;
+            
+        }
+        
+    }
+     return false;
+}
 
 
 
@@ -339,13 +373,19 @@ Item* Screen::getItem(const Point& p) {
         if (ip.getX() == x && ip.getY() == y) {
             // Only CollectableItems can be picked up by player.
             CollectableItems* ci = dynamic_cast<CollectableItems*>(item);
+			SteppedOnItems* si = dynamic_cast<SteppedOnItems*>(item);
             if (ci) {
                 // transfer ownership: remove from screen list and return the pointer
                 items.erase(it);
                 // ensure room template doesn't still contain the character
                 changePixelInRoom(ip, ' ');
                 return ci;
-            } else {
+            }
+            else if (si) {
+                // stepped-on item, return pointer without removing from screen
+				return si;
+            }
+            else {
                 // not collectable
                 return nullptr;
             }

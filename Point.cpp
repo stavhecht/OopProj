@@ -1,8 +1,20 @@
 #include "Point.h"
 #include "Screen.h"
 #include "Item.h" // full Item definition needed for operator=
-
 #include <iostream>
+
+Point& Point::operator=(const Point& other) {
+	if(this != &other) {
+		x = other.x;
+		y = other.y;
+		diff_x = other.diff_x;
+		diff_y = other.diff_y;
+		ch = other.ch;
+		color = other.color;
+	}
+	return *this;
+}
+
 
 void Point::draw(char c) const {
 	gotoxy(x, y);
@@ -55,6 +67,11 @@ std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 		for (int dx = -radius; dx <= radius; ++dx) {
 			int newX = x + dx;
 			int newY = y + dy;
+
+            // bounds-check: avoid out-of-range accesses on the Screen buffers
+            if (newX < 0 || newX >= Screen::MAX_X || newY < 0 || newY >= Screen::MAX_Y)
+                continue;
+
 			Point targetPoint(newX, newY);
 			if (screen.isItem(targetPoint)) {
 				return std::make_pair(true, targetPoint);
@@ -69,6 +86,11 @@ std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
 		for (int dx = -radius; dx <= radius; ++dx) {
 			int newX = x + dx;
 			int newY = y + dy;
+
+            // bounds-check: ensure we don't query screen buffers with invalid indices
+            if (newX < 0 || newX >= Screen::MAX_X || newY < 0 || newY >= Screen::MAX_Y)
+                continue;
+
 			Point targetPoint(newX, newY);
 			if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
 				return std::make_pair(true, targetPoint);

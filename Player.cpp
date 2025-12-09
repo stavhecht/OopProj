@@ -9,12 +9,29 @@ Player::Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& 
 }
 
 
+Player& Player::operator=(const Player& other) {
+    if (this != &other) {
+        pos = other.pos;
+        for (int i = 0; i < NUM_KEYS; ++i) {
+            keys[i] = other.keys[i];
+        }
+        screen = other.screen;
+        inventory = other.inventory;
+        visible = other.visible;
+    }
+    return *this;
+}
+
+
 void Player::draw() {
+	if (!visible) return;
     pos.draw();
 }
 
 
 void Player::pickUp() {
+	if (!visible) return;
+
     auto res = pos.ItemInRadios(screen, 1);
     bool found = res.first;
     Point itemPos = res.second;
@@ -40,6 +57,8 @@ void Player::pickUp() {
 
 
 void Player::dispose() {
+	if (!visible) return;
+
     if (!inventory)
         return;
 
@@ -70,10 +89,22 @@ CollectableItems* Player::takeInventory() {
     return tmp;
 }
 
+void Player::setVisible(bool v) {
+	if (visible == v) return;
 
-
+	if (!v) {
+		// erase current glyph from console before hiding
+		pos.draw(' ');
+	} else {
+		// if becoming visible again, draw at current pos
+		pos.draw();
+	}
+	visible = v;
+}
 
 void Player::move() {
+	if (!visible) return;
+
     // erase current
     pos.draw(' ');
 
@@ -82,7 +113,7 @@ void Player::move() {
     next.move();
 
     // block on walls/doors/items (like wall collision)
-    if (screen.isWall(next) || screen.isDoor(next) || screen.isItem(next)) {
+    if (screen.isWall(next) || screen.isItem(next)) {
         // redraw current position and don't move
         pos.draw();
         return;
@@ -93,12 +124,17 @@ void Player::move() {
 }
 
 void Player::handleKeyPressed(char key_pressed) {
+	if (!visible) return;
+
     size_t index = 0;
     for (char k : keys) {
         if (std::tolower(k) == std::tolower(key_pressed)) {
             if (k == 'o' || k == 'e') {
-                if (inventory == nullptr)
+                if (inventory == nullptr) {
                     pickUp();
+					index = static_cast<size_t>(Direction::STAY);           //stay in place after pickup
+                    pos.setDirection(static_cast<Direction>(index));
+                }
                 else
                     dispose();
             }

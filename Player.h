@@ -10,6 +10,7 @@ class Player {
 	char keys[NUM_KEYS];
 	Screen& screen;
 	CollectableItems* inventory = nullptr;
+	bool visible = true; // new: track whether player is present / drawn
 public:
 	// ctor gets start point and an array of 5 keys
 	Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room);
@@ -31,7 +32,17 @@ public:
 
 	Point getPos() const { return pos; }
 	void setPos(const Point& p) { pos = p; }
+	void setInventory(CollectableItems* item) { inventory = item; }
 
 	Screen& getScreen() { return screen; }
 	const Screen& getScreen() const { return screen; }
+
+	// Visibility helpers (new)
+	void setVisible(bool v);
+	bool isVisible() const { return visible; }
+
+	Player& operator=(const Point& p){pos = p; return *this;}
+	Player& operator=(const Player& other);
+
+	
 };

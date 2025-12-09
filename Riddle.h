@@ -12,6 +12,7 @@ class Riddle: public SteppedOnItems{
 
 	Riddle(const Riddle&) = default;
 	Riddle& operator=(const Riddle&) = default;
+	bool isAnswered() const { return answered; }
 
 	void onStep(Player& player, Screen& screen) override;
 

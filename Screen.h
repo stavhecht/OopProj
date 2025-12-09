@@ -6,6 +6,7 @@
 #include "SteppedOnItems.h"
 #include "Console.h"
 #include "Door.h"
+#include "Riddle.h"
 #include <vector>
 
 
@@ -16,29 +17,30 @@ public:
 	char currentRoom[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
 private:
 	std::vector<Item*> items;
+	std::vector<Point> openedDoors;
 
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
 			"WWWWW               WWWWWWWWW                                          W    WWWW", // 2
-			"WWWWW                                                 K                W    WWWW", // 3
+			"WWWWW                                                                  W    WWWW", // 3
 			"WWWWW                                                                  W    WWWW", // 4
 			"WWWWW                                                                  W    WWWW", // 5
 			"WWWWW                                                                  W    WWWW", // 6
 			"WWWWW                                                                       WWWW", // 7
 			"WWWWW               WWWWWWWWW                                               WWWW", // 8
 			"WWWWW               WWWWWWWWW                                               WWWW", // 9
-			"                                                                              1 ", // 10
+			"WWWW                                                                          1 ", // 10
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 12
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 13
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 14
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 15
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW?WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 15
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 16
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 17
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 18
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 19
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW          K          WWWWWWWWWWWWWWWW    WWWW", // 19
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 20
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 21
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW    WWWW", // 22
@@ -496,9 +498,11 @@ public:
 
 public:
 	
-
+	Item* peekItemAt(const Point& p) const;
 
 	void gobacktoMenu();
+
+	bool removeItemAt(const Point & p);
 
 	bool isItem(const Point& p) const {
 		// Check active items first
@@ -508,10 +512,8 @@ public:
 			if (ip.getX() == p.getX() && ip.getY() == p.getY())
 				return true;
 		}
-		// Fallback to template char
-		char c = currentRoom[p.getY()][p.getX()];
-		return (c == '@' || c == '*' || c == '/' ||
-			c == '\'' || c == 'K' || c == '?');
+		// no item found
+		return false;
 	}
 
 	bool isDoor(const Point& p) const {
@@ -533,5 +535,20 @@ public:
 	bool isWall(const Point& p) const {
 		return getCharAtcurrentRoom(p) == 'W';
 	}
+
+	// Mark a door location as opened (persist for the current room)
+	void markDoorOpened(const Point& p) { openedDoors.push_back(p); }
+
+	// Query whether a door was opened at the given point (position equality)
+	bool isDoorOpenedAt(const Point& p) const {
+		for (const Point& dp : openedDoors) {
+			if (dp.getX() == p.getX() && dp.getY() == p.getY())
+				return true;
+		}
+		return false;
+	}
+
+	// Clear opened-door registry (called when loading a new room)
+	void clearOpenedDoors() { openedDoors.clear(); }
 };
 

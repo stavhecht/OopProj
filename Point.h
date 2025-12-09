@@ -49,6 +49,7 @@ public:
 
     // Assign appearance from an Item (copies glyph + color only — preserves x/y)
     Point& operator=(const Item& item);
+    Point& operator=(const Point& other);
     Point& operator=(const Item* item) { if (item) return operator=(*item); return *this; }
 
     std::pair<bool, Point> ItemInRadios(Screen& screen, int radius) const;
