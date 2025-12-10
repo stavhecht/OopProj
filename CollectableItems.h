@@ -2,6 +2,7 @@
 #include "Item.h"
 
 class CollectableItems : public Item {
+protected:
     bool picked = false;
 
 public:

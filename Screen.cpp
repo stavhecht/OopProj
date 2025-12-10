@@ -4,8 +4,6 @@
 #include "Door.h"
 #include "Riddle.h"
 #include "Bomb.h"
-
-
 #include <cstring>
 #include <iostream>
 #include <fstream>
@@ -17,7 +15,29 @@
 // Use setMenu() to populate currentBoard with the menu template on construction.
 Screen::Screen() {
     setMenu();
-    // Keep currentRoom empty until a room is selected (setRoomN will populate it).
+
+    // initialize cell colors to a sensible default for the whole buffer
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            cellColor[y][x] = Color::Gray;
+        }
+    }
+
+    // initialize per-room defaults and enable coloring per-room by default
+    for (int i = 0; i < ROOM_COUNT; ++i) {
+        roomDefaultColor[i] = Color::Gray;
+        roomUseColor[i] = false;
+    }
+    // set sensible defaults for the named rooms (1..3)
+    roomDefaultColor[1] = Color::LightYellow; // room 1 ambient
+    roomDefaultColor[2] = Color::Blue;   // room 2 ambient
+    roomDefaultColor[3] = Color::Gray;        // room 3 ambient
+
+    roomUseColor[1] = true;
+    roomUseColor[2] = true;
+    roomUseColor[3] = true;
+
+    // Keep currentRoom empty until a room is selected (setRoom will populate it).
 }
 
 Screen::~Screen() {
@@ -25,6 +45,74 @@ Screen::~Screen() {
         delete it;
     }
     items.clear();
+}
+
+// --- per-room defaults API implementations ---
+void Screen::setRoomDefaultColor(int roomIndex, Color c) {
+    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return;
+    roomDefaultColor[roomIndex] = c;
+}
+
+Color Screen::getRoomDefaultColor(int roomIndex) const {
+    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return Color::Gray;
+    return roomDefaultColor[roomIndex];
+}
+
+void Screen::setRoomUseColor(int roomIndex, bool use) {
+    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return;
+    roomUseColor[roomIndex] = use;
+}
+
+bool Screen::isRoomUseColor(int roomIndex) const {
+    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return false;
+    return roomUseColor[roomIndex];
+}
+
+// Save/restore state used by pause
+void Screen::saveStateForPause() {
+    // save current room chars
+    for (int y = 0; y < MAX_Y; ++y) {
+        std::memcpy(savedRoom[y], currentRoom[y], MAX_X + 1);
+        // save per-cell colors
+        for (int x = 0; x < MAX_X; ++x) {
+            savedCellColor[y][x] = cellColor[y][x];
+        }
+    }
+    hasSavedState = true;
+}
+
+void Screen::restoreStateFromPause() {
+    if (!hasSavedState) return;
+    for (int y = 0; y < MAX_Y; ++y) {
+        std::memcpy(currentRoom[y], savedRoom[y], MAX_X + 1);
+        for (int x = 0; x < MAX_X; ++x) {
+            cellColor[y][x] = savedCellColor[y][x];
+        }
+    }
+    hasSavedState = false;
+}
+
+// Iterate live items and update any armed Bombs. Explode bombs whose fuse reaches zero.
+void Screen::updateBombs() {
+    // iterate by index so we can erase safely
+    for (size_t i = 0; i < items.size(); ) {
+        Item* it = items[i];
+        Bomb* b = dynamic_cast<Bomb*>(it);
+        if (b && b->isArmed()) {
+            bool shouldExplode = b->tick();
+            if (shouldExplode) {
+                Point center = b->getPos();
+                // remove and delete the Bomb item
+                delete it;
+                items.erase(items.begin() + i);
+                // trigger explosion effect at captured center
+                Bomb::triggerBomb(*this, center);
+                // do not increment i (we removed current element)
+                continue;
+            }
+        }
+        i++;
+    }
 }
 
 void Screen::setScoreBoard() {
@@ -66,7 +154,7 @@ void Screen::fixBoard() {
     }
 }*/
 
-// Function to set the board to the guide state
+ // Function to set the board to the guide state
 void Screen::setGuide() {
     // Loop through all rows and copy the guide board to the current board
     for (int i = 0; i < MAX_Y; i++) {
@@ -150,41 +238,68 @@ Screen::Screen(const Screen& other) {
     for (Item* it : other.items) {
         if (it) items.push_back(it->clone());
     }
+
+    // copy color buffer
+    for (int y = 0; y < MAX_Y; ++y)
+        for (int x = 0; x < MAX_X; ++x)
+            cellColor[y][x] = other.cellColor[y][x];
+
+    hasSavedState = other.hasSavedState;
+    if (hasSavedState) {
+        for (int y = 0; y < MAX_Y; ++y) {
+            std::memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
+            for (int x = 0; x < MAX_X; ++x)
+                savedCellColor[y][x] = other.savedCellColor[y][x];
+        }
+    }
 }
 
-// Function to print the current board to the console
-void Screen::printBoard() const {
+// Function to print the current board to the console (menu / simple boards)
+void Screen::printBoard(Color col) const {
     // Move the cursor to the top-left corner
     system("cls");
 
     gotoxy(0, 0);
 
-    // Loop through all rows (except the last one) and print each line
-    for (int i = 0; i < MAX_Y - 1; i++) {
-        std::cout << currentBoard[i] << '\n';  // Print each row with a newline after it
+    // For boards (menu, paused, etc.) we keep previous behaviour: single color for whole board
+    set_color(col);
+
+    for (int y = 0; y < MAX_Y - 1; ++y) {
+        std::cout << currentBoard[y] << '\n';
     }
-    // Print the last row without a newline after it
     std::cout << currentBoard[MAX_Y - 1];
+    reset_color();
 }
 
-void Screen::printRoom() const {
+void Screen::printRoom(Color defaultCol) const {
     // Move the cursor to the top-left corner
     system("cls");
 
     gotoxy(0, 0);
-    set_color(Color::Yellow);
 
-    // Loop through all rows (except the last one) and print each line
-    for (int i = 0; i < MAX_Y - 1; i++) {
-        std::cout << currentRoom[i] << '\n';  // Print each row with a newline after it
+    // Print each character using the per-cell color buffer.
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            Color c = cellColor[y][x];
+            set_color(c);
+            std::cout << currentRoom[y][x];
+        }
+        if (y < MAX_Y - 1) std::cout << '\n';
     }
-    // Print the last row without a newline after it
-    std::cout << currentRoom[MAX_Y - 1];
     reset_color();
 
+    // Draw live items on top of the printed room.
     for (Item* it : items) {
         if (it) {
             it->draw();
+        }
+    }
+
+    // Draw registered players (if any)
+    if (registeredPlayers && registeredPlayerCount > 0) {
+        for (int i = 0; i < registeredPlayerCount; ++i) {
+            if (registeredPlayers[i].isVisible())
+                registeredPlayers[i].draw();
         }
     }
 }
@@ -235,6 +350,7 @@ Point Screen::searchChar(char c) const {
 void Screen::setRoom(int nRoom) {
     // clear opened doors for the new room
     clearOpenedDoors();
+	currentRoomIndex = nRoom;
 
     // Delete any existing live items before loading a new room to avoid dangling pointers/leaks
     for (Item* it : items) {
@@ -248,24 +364,39 @@ void Screen::setRoom(int nRoom) {
     {
         for (int i = 0; i < MAX_Y; i++)
             memcpy(currentRoom[i], gameRoom1[i], MAX_X + 1);  // Copy each row with an additional null terminator
-		break;
+        break;
     }
     case 2:
     {
         for (int i = 0; i < MAX_Y; i++)
-            memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);  
-	}   break;
+            memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);
+    }   break;
     case 3:
     {
         for (int i = 0; i < MAX_Y; i++)
-            memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);  
-		break;
-	}
+            memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);
+        break;
+    }
     default:
         break;
     }
 
-    // populate live items from template
+    // set per-cell color to the room default (or uncolored ambient if roomUseColor is false)
+    Color roomDefault = Color::Gray;
+    if (nRoom > 0 && nRoom < ROOM_COUNT && roomUseColor[nRoom]) {
+        roomDefault = roomDefaultColor[nRoom];
+    } else {
+        // uncolored version -> choose neutral ambient (Gray)
+        roomDefault = Color::Gray;
+    }
+
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            cellColor[y][x] = roomDefault;
+        }
+    }
+
+    // populate live items from template (unchanged)
     for (int y = 0; y < MAX_Y; ++y) {
         for (int x = 0; x < MAX_X; ++x) {
             char c = currentRoom[y][x];
@@ -275,7 +406,7 @@ void Screen::setRoom(int nRoom) {
                 auto* torch = new Torch(pos, '!', Color::Yellow);
                 addItem(torch);
                 changePixelInRoom(pos, ' ');
-				torch->draw();
+                torch->draw();
                 break;
             }
             case 'K': { // key
@@ -342,6 +473,27 @@ Item* Screen::peekItemAt(const Point& p) const {
 }
 
 
+void Screen::hidePlayersInRadius(const Point& center, int radius) {
+    if (!registeredPlayers || registeredPlayerCount <= 0)
+        return;
+    
+        int radiusSq = radius * radius;
+    for (int i = 0; i < registeredPlayerCount; ++i) {
+        Player & p = registeredPlayers[i];
+        Point pp = p.getPos();
+        int dx = pp.getX() - center.getX();
+        int dy = pp.getY() - center.getY();
+        if (dx * dx + dy * dy <= radiusSq) {
+            if (p.isVisible()) {
+                p.setVisible(false);
+                p.setPos(Point(-1, -1));
+                
+            }            
+        }        
+    }    
+}
+
+
 
 bool Screen::removeItemAt(const Point & p) {
     for (auto it = items.begin(); it != items.end(); ++it) {
@@ -398,7 +550,6 @@ Item* Screen::getItem(const Point& p) {
 
 
 
-
 Screen& Screen::operator=(Screen const& other) {
     if (this == &other) {
         return *this;
@@ -435,6 +586,20 @@ Screen& Screen::operator=(Screen const& other) {
     // deep-copy items
     for (Item* it : other.items) {
         if (it) items.push_back(it->clone());
+    }
+
+    // copy color buffer
+    for (int y = 0; y < MAX_Y; ++y)
+        for (int x = 0; x < MAX_X; ++x)
+            cellColor[y][x] = other.cellColor[y][x];
+
+    hasSavedState = other.hasSavedState;
+    if (hasSavedState) {
+        for (int y = 0; y < MAX_Y; ++y) {
+            std::memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
+            for (int x = 0; x < MAX_X; ++x)
+                savedCellColor[y][x] = other.savedCellColor[y][x];
+        }
     }
 
     return *this;

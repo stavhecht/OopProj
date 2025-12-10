@@ -19,7 +19,7 @@ public:
 	void draw();
 	void move();
 	void pickUp();
-	void dispose();
+	CollectableItems* dispose();
 
 	// Return current inventory pointer (may be nullptr)
 	CollectableItems* getInventory() const { return inventory; }

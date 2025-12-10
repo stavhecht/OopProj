@@ -1,4 +1,6 @@
 #include "Player.h"
+#include "Bomb.h"
+#include "Torch.h"
 #include <cctype>
 
 Player::Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room)
@@ -52,20 +54,26 @@ void Player::pickUp() {
     // let item react
     inventory->onPickUp(*this, screen);
 
+    // Redraw the room first, then paint torch overlay (if any).
     screen.printRoom();
+
+    // If the picked-up item is a Torch, activate its effect immediately and update buffer
+    if (Torch* t = dynamic_cast<Torch*>(inventory)) {
+        t->torchEffect(screen, pos);
+    }
 }
 
 
-void Player::dispose() {
-	if (!visible) return;
+CollectableItems* Player::dispose() {
+	if (!visible) return nullptr;
 
     if (!inventory)
-        return;
+        return nullptr;
 
     auto res = pos.PlaceToDrop(screen, 1);
     bool found = res.first;
     if (!found)
-        return;
+        return nullptr;
 
     Point dropPos = res.second;
 
@@ -74,13 +82,41 @@ void Player::dispose() {
     dropPos = *inventory;
 
     inventory->setPos(dropPos);
+
+    // Let the item react to being dropped
     inventory->onDrop(*this, screen);
 
-    // return ownership to screen so it becomes an active item again
-    screen.addItem(inventory);
+    // If it's a bomb, arm it (non-blocking) and transfer ownership to the screen
+    Bomb* bomb = dynamic_cast<Bomb*>(inventory);
+    if (bomb) {
+        // transfer ownership to screen and arm fuse
+        screen.addItem(bomb);
+        constexpr int fuseTicks = 5; // explodes after 5 game-loop ticks
+        bomb->arm(fuseTicks);
 
-    inventory = nullptr;
+        screen.printRoom();
+        inventory = nullptr;
+        return nullptr;
+    }
+
+    // If it's a torch, transfer it to the screen and make it a persistent light source
+    Torch* torch = dynamic_cast<Torch*>(inventory);
+    if (torch) {
+        screen.addItem(torch);
+        // ensure the torch lights its area centered on its drop position
+        torch->paintLight(screen, dropPos, 4);
+
+        screen.printRoom();
+        inventory = nullptr;
+        return nullptr;
+    }
+
+    // Non-bomb: normal drop behavior -> add to screen as live item
+    screen.addItem(inventory);
     screen.printRoom();
+    CollectableItems* tmp = inventory;
+    inventory = nullptr;
+    return tmp;
 }
 
 CollectableItems* Player::takeInventory() {
@@ -105,9 +141,6 @@ void Player::setVisible(bool v) {
 void Player::move() {
 	if (!visible) return;
 
-    // erase current
-    pos.draw(' ');
-
     // compute next
     Point next = pos;
     next.move();
@@ -119,6 +152,15 @@ void Player::move() {
         return;
     }
 
+    // if carrying a torch, update light incrementally: compute diff between pos and next
+    Torch* torch = nullptr;
+    if (inventory) torch = dynamic_cast<Torch*>(inventory);
+    if (torch) {
+        torch->paintLightDiff(screen, pos, next);
+    }
+
+    // erase current and move
+    pos.draw(' ');
     pos = next;
     pos.draw();
 }
@@ -135,8 +177,10 @@ void Player::handleKeyPressed(char key_pressed) {
 					index = static_cast<size_t>(Direction::STAY);           //stay in place after pickup
                     pos.setDirection(static_cast<Direction>(index));
                 }
-                else
+                else {
                     dispose();
+				
+                }
             }
             else {
                 pos.setDirection(static_cast<Direction>(index));

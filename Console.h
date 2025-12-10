@@ -202,10 +202,21 @@ inline void cleanup_console() {
 
 enum class Color { Black, Blue, Green, Aqua, Red, Purple, Yellow, White, Gray, LightBlue, LightGreen, LightAqua, LightRed, LightPurple, LightYellow, BrightWhite };
 
+
+extern bool g_colors_enabled;
+
+// Helpers to control colors
+inline void set_colors_enabled(bool enabled) { g_colors_enabled = enabled; }
+inline bool colors_enabled() { return g_colors_enabled; }
+inline void toggle_colors() { g_colors_enabled = !g_colors_enabled; }
+
 /**
- * Set text color (cross-platform)
+ * Set text color (cross-platform).
+ * If colors are disabled, this becomes a no-op.
  */
 inline void set_color(Color color) {
+    if (!g_colors_enabled) return;
+
 #ifdef PLATFORM_WINDOWS
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, static_cast<int>(color));
@@ -235,12 +246,12 @@ inline void set_color(Color color) {
 }
 
 /**
- * Reset text color to default White on black
+ * Reset text color to default White on black.
  */
 inline void reset_color() {
+    if (!g_colors_enabled) return;
     set_color(Color::White);
 }
-
 
 #endif // _CONSOLE_H_
 

@@ -20,6 +20,10 @@ public:
     Point(int x1, int y1, int diffx, int diffy, char c)
         : Point(x1, y1, diffx, diffy, c, Color::White) {}
 
+    Point(int x1, int y1, Color myColor)
+        : x(x1), y(y1), color(myColor) {
+    }
+
     Point(int x1, int y1, char c, Color myColor)
 		: x(x1), y(y1), ch(c), color(myColor) {
 	}
@@ -51,6 +55,14 @@ public:
     Point& operator=(const Item& item);
     Point& operator=(const Point& other);
     Point& operator=(const Item* item) { if (item) return operator=(*item); return *this; }
+
+    // Proper equality operators
+    bool operator==(const Point& other) const {
+        return x == other.x && y == other.y;
+    }
+    bool operator!=(const Point& other) const {
+        return !(*this == other);
+    }
 
     std::pair<bool, Point> ItemInRadios(Screen& screen, int radius) const;
     std::pair<bool, Point> PlaceToDrop(Screen& screen, int radius) const;

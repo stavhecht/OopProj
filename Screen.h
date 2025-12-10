@@ -8,6 +8,7 @@
 #include "Door.h"
 #include "Riddle.h"
 #include <vector>
+using std::vector;
 
 
 class Screen {
@@ -16,8 +17,24 @@ public:
 	char currentBoard[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
 	char currentRoom[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
 private:
-	std::vector<Item*> items;
-	std::vector<Point> openedDoors;
+	vector<Item*> items;
+	vector<Point> openedDoors;
+	Player* registeredPlayers = nullptr;
+	int registeredPlayerCount = 0;
+	int currentRoomIndex = 0;
+
+	// Per-cell color buffer (keeps illumination persistent across redraws & pauses)
+	Color cellColor[MAX_Y][MAX_X];
+
+	// Per-room default color data (index 1..3 used for rooms)
+	static constexpr int ROOM_COUNT = 4; // index 0 unused
+	Color roomDefaultColor[ROOM_COUNT];
+	bool roomUseColor[ROOM_COUNT]; // when false, room will be "uncolored" (uses uncolored default)
+
+	// Saved state when entering pause (so we can restore it exactly)
+	char savedRoom[MAX_Y][MAX_X + 1];
+	Color savedCellColor[MAX_Y][MAX_X];
+	bool hasSavedState = false;
 
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -31,20 +48,20 @@ private:
 			"WWWWW                                                                       WWWW", // 7
 			"WWWWW               WWWWWWWWW                                               WWWW", // 8
 			"WWWWW               WWWWWWWWW                                               WWWW", // 9
-			"WWWW                                                                          1 ", // 10
+			"WWWWW                                                                         1 ", // 10
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 12
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 13
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 14
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW?WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 15
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 16
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 17
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 18
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW          K          WWWWWWWWWWWWWWWW    WWWW", // 19
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 20
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 21
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW    WWWW", // 22
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW    WWWW", // 23
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWWWWWWWWWW", // 16
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWWWWWWWWWW", // 17
+			"WWWWWWWWWWWWWWW     WWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWWWWWWWWWW", // 18
+			"WWWWWWWWWWWWWWW K   WWW                                 WWWWWWWWWWWWWWWWWWWWWWWW", // 19
+			"WWWWWWWWWWWWWWW     WWWWWWWWWWWWWWW          @          WWWWWWWWWWWWWWWWWWWWWWWW", // 20
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWWWWWWWWWW", // 21
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 22
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 23
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
@@ -59,9 +76,9 @@ private:
 		"WWWWWWWWWWWWW    WWWWWWWWWWWW         WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 5
 		"WWWWWWWWWWWWW    WWWWWWWWWWWW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 6
 		"W                   WWWW                            WWWW                       W", // 7
-		"W                                                   WWWW                       W", // 8
+		"W                                     !             WWWW                       W", // 8
 		"W                                                   WWWW                       W", // 9
-		"W         WW        WWWWWWWW                        WWWW                       W", // 10
+		"W         WW        WWWWWWWW       K                2WWW                       W", // 10
 		"W         WW        WWWWWWWW                        WWWW                       W", // 11
 		"W         WW        WWWWWWWW                        WWWW                       W", // 12
 		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 13
@@ -72,7 +89,7 @@ private:
 		"W                       W                           WWW              W         W", // 18
 		"W                       W                           WWW              W         W", // 19
 		"W                       W                           WWW              W         W", // 20
-		"W              2        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW         W", // 21
+		"W                       WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW         W", // 21
 		"W                            WWW            WW              WW                 W", // 22
 		"W                            WW        WW              WW           WW         W", // 23
 		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
@@ -80,32 +97,32 @@ private:
 
 	
 	const char* gameRoom3[MAX_Y] = {
-	//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0 
-		"W                               W                                              W", // 1
-		"W  WWWWWWWWWWW  WWW      WWW   W   WWWWW   WWWWW   WWWW  W   WWWWWWWWWWWWWWW   W", // 2
-		"W  W        W   W        W     W   W   W       W     W   W   W             W   W", // 3
-		"W  W        W   WWWWWWW  W  WWWW   W   W  WWW  W  WWWW   W   W             W   W", // 4
-		"W  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW  W", // 5
-		"W                                                                              W", // 6
-		"W                                                                              W", // 7
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 8
-		"W                                                                              W", // 9
-		"W  W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W", // 10
-		"W  W   W   W   W   W   W   W       W   W   W       W       W       W   W       W", // 11
-		"W  W   WWWWW   WWWWW   WWWWW   WWWWW   WWW   WWWWW   WWWWW   WWWWW   WWWWW     W", // 12
-		"W  W                                                                           W", // 13
-		"W                                                                              W", // 14
-		"W                                                                              W", // 15
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 16
-		"W                                                                              W", // 17
-		"W                                                                              W", // 18
-		"W                                                                              W", // 19
-		"W                                                                              W", // 20
-		"W                                                                              W", // 21
-		"W                                                                              W", // 22
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 23
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24 
+		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
+			"W                 W                          W                                 W", // 1 
+			"W  WWWWWWWWWWWW   W   WWWWWW   WWWWWWWW      W   WWWWWWWWWWWWWWWWWW            W", // 2 
+			"W  W              W       W          W        W   W              W             W", // 3  
+			"W  W   WWWWWW W  !WWWWW   WWWWWWW    W   WWWWWW   W   WWWWWWWW   W   WWWWWW    W", // 4  
+			"W  W       W  W        W        W    W       W    W        W     W       W     W", // 5 
+			"W  WWWWW   W  WWWWWWWWWW   WWW  WWWWWW   W   W    WWWWWWW  W  WWWWWWWW  W  WWWWW", // 6  
+			"W      W   W          W     W      W     W   W          W  W        W  W       W", // 7 
+			"WWWWW  WWWWW   WWWWW  W  WWWWWWW   WWWWWWW   WWWWW   WWWW  WWWWWWW  WWW   WWWWWW", // 8  
+			"W                  W  W        W                 W        W       W            W", // 9  
+			"W  WWWWWWWWW   W   W  WWWWWWW  WWWWWWWWWWWWWWW   WWWWWWW  WWWWWWW WWWWWWWWWW   W", // 10 
+			"W  W        W  W   W        W                 W        W       W        W      W", // 11 
+			"W  W   WWWWWW  WWWWW  WWWWWWW  WWWWWWWWWWWWW  WWWWWW   WWWWW   WWWWW   W   WWW W", // 12 
+			"W  W       W        W        W              W       W       W       W  W      WW", // 13 
+			"W  WWWWW   W  WWWW  WWWWWW   WWWWWWWWWW     WWWWW   WWWWW   WWWWW   WWWWWWWW  WW", // 14 
+			"W      W  W      W        W          W         W        W        W          W  W", // 15 
+			"WWWWW  WWWWWWWW  W  WWWWWWW  WWWWWWWW  WWWWWWWW  WWWWW  WWWWWW  WWWWWWWW   WWWWW", // 16 
+			"W         W      W       W        W            W      W        W               W", // 17 
+			"W   WWWW  W  WWWWW  WWW  WWWWWWW  WWWWWWWWWW   WWWWW  WWWWWW  WWWWWWWW   WWWWW W", // 18 
+			"W      W     W          W                W           W         W      W      W W", // 19 
+			"WWWWW  WWWWWWW  WWWWWWWWW   WWWWWWWWWW   WWWWWWWWWWWWW  WWWWWWW WWWWWWWW  WWWW W", // 20 
+			"W         W             W           W                 W        W               W", // 21 
+			"W   WWW   W   WWWWWWW   WWWWWWW    W   WWWWWWWWWW     WWWWWWW  W   WWWWWWWWW   W", // 22 
+			"W       W                 W        W           W              W                W", // 23 
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
 
@@ -387,7 +404,7 @@ private:
 			"W                                                                              W", // 16
 			"W                                                                              W", // 17
 			"W                                                                              W", // 18
-			"W                              PRESS ESC TO CONINUE                            W", // 19
+			"W                              PRESS ESC TO CONNOTE                           W", // 19
 			"W                           PRESS H TO GO BACK TO MENU                         W", // 20
 			"W                                                                              W", // 21
 			"W                                                                              W", // 22
@@ -406,7 +423,20 @@ public:
 
 	Screen(const Screen& other);
 
-	
+	// color / cell helpers
+	void setCellColor(const Point& p, Color c) { if (p.getX() >= 0 && p.getX() < MAX_X && p.getY() >= 0 && p.getY() < MAX_Y) cellColor[p.getY()][p.getX()] = c; }
+	Color getCellColor(const Point& p) const { if (p.getX() >= 0 && p.getX() < MAX_X && p.getY() >= 0 && p.getY() < MAX_Y) return cellColor[p.getY()][p.getX()]; return Color::LightYellow; }
+	int getCurrentRoomIndex() const { return currentRoomIndex; }
+
+	// Per-room defaults API
+	void setRoomDefaultColor(int roomIndex, Color c);
+	Color getRoomDefaultColor(int roomIndex) const;
+	void setRoomUseColor(int roomIndex, bool use);
+	bool isRoomUseColor(int roomIndex) const;
+
+	// Save/restore state used for pause/unpause
+	void saveStateForPause();
+	void restoreStateFromPause();
 
 	// choose screen
 	//int chooseRoom(std::vector<std::string> const, const int sumOfFiles);
@@ -418,12 +448,8 @@ public:
 	void setScreenError();
 	void setGamePaused();
 	void setRiddle();
-
-
 	void setRoom(int nRoom);
-	//void setRoom2();
-	//void setRoom3();
-	// 
+	
 	// Sets the current board to the end load state
 	//void setEndLoad();
 
@@ -443,8 +469,8 @@ public:
 	// Checks if a screen is valid 
 	//bool isScreenOk(int i);
 
-	void printBoard() const;
-	void printRoom() const;
+	void printBoard(Color col = Color::LightYellow) const;
+	void printRoom(Color col = Color::Gray) const;
 
 
 	// Searches for a specific character on the board
@@ -486,6 +512,12 @@ public:
 	}
 
 
+	void registerPlayers(Player* players, int count) { registeredPlayers = players; registeredPlayerCount = count; }
+	
+	 // Hide any registered players whose positions are within `radius` of `center`.
+	void hidePlayersInRadius(const Point& center, int radius);
+
+
 	// Returns a newly-allocated CollectableItems* if player picks up an item at `p`.
 	// The item is removed from the activeCollectables in the loaded room.
 	Item* getItem(const Point& p);
@@ -495,8 +527,6 @@ public:
 	// Active items for the currently loaded room.
 	// Stored by value to avoid needing virtual destructor on Item.
 
-
-public:
 	
 	Item* peekItemAt(const Point& p) const;
 
@@ -550,5 +580,8 @@ public:
 
 	// Clear opened-door registry (called when loading a new room)
 	void clearOpenedDoors() { openedDoors.clear(); }
+
+	// Called each game-loop tick to update armed bombs stored in `items`.
+	void updateBombs();
 };
 

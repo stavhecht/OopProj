@@ -1,4 +1,5 @@
 #include "AdeventureGame.h"
+#include "Bomb.h"
 #include "Console.h"
 
 AdeventureGame::AdeventureGame()
@@ -29,7 +30,10 @@ void AdeventureGame::run() {
                     startGame = true; // start the game loop
                 }
                 else if (key == '2') {
-                    // color toggle placeholder
+                    // Toggle colors ON/OFF and redraw menu
+                    toggle_colors();
+                    screen.setMenu();
+                    screen.printBoard();
                 }
                 else if (key == '3') {
                     screen.setScoreBoard();
@@ -62,8 +66,11 @@ void AdeventureGame::run() {
         int currentRoom = 1;
         int movedToNextRoom = 0; // track number of players that disappeared for current room
         const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
+        screen.registerPlayers(players, playerCount);
+
 
         while (running) {
+            screen.updateBombs(); // update pending bombs
             if (changeRoom) {
                 // Set the correct room
                 if (currentRoom == 1) {
@@ -168,7 +175,6 @@ void AdeventureGame::run() {
                     if (door) {
                         Point doorPos = door->getPos();
                         door->onStep(p, screen);
-
                         // after door handling we do not process other interactions for this tick
                         break;
                     }
@@ -182,6 +188,7 @@ void AdeventureGame::run() {
                         }
                         break;
                     }
+
 
                 
                     break;
@@ -202,6 +209,8 @@ void AdeventureGame::run() {
             if (check_kbhit()) {
                 char key = static_cast<char>(get_single_char());
                 if (key == ESC) {
+                    // Save current room state (chars + per-cell colors), then show paused board
+                    screen.saveStateForPause();
                     screen.setGamePaused();
                     screen.printBoard();
 
@@ -229,7 +238,8 @@ void AdeventureGame::run() {
                     }
 
                     if (requestUnpause) {
-                        // Redraw current game room and resume.
+                        // Restore prior room + colors and resume.
+                        screen.restoreStateFromPause();
                         screen.printRoom();
                     }
                 }

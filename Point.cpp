@@ -84,6 +84,8 @@ std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
+			if(dx == 0 && dy == 0)
+				continue; // skip own position
 			int newX = x + dx;
 			int newY = y + dy;
 
