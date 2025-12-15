@@ -212,10 +212,16 @@ inline void toggle_colors() { g_colors_enabled = !g_colors_enabled; }
 
 /**
  * Set text color (cross-platform).
- * If colors are disabled, this becomes a no-op.
+ * If colors are disabled, this becomes a no-op EXCEPT for Black and White.
+ * We allow Black/White so room 3 (forced-black) and torch fallback (white)
+ * remain visible even when the rest of the game has coloring disabled.
  */
 inline void set_color(Color color) {
-    if (!g_colors_enabled) return;
+    // Allow forced black/white even when global colors are disabled.
+    if (!g_colors_enabled) {
+        if (!(color == Color::Black || color == Color::White)) return;
+        // otherwise fall through and emit color codes for Black/White
+    }
 
 #ifdef PLATFORM_WINDOWS
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -247,9 +253,12 @@ inline void set_color(Color color) {
 
 /**
  * Reset text color to default White on black.
+ * Always restore to white so forced black/white prints return terminal
+ * to a consistent state even when g_colors_enabled == false.
  */
 inline void reset_color() {
-    if (!g_colors_enabled) return;
+    // Restore to white unconditionally so forced prints behave predictably.
+    // This intentionally does not check g_colors_enabled.
     set_color(Color::White);
 }
 

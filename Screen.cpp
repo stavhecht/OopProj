@@ -61,24 +61,34 @@ void Screen::copyTemplateToCurrentRoom(const char* const roomTemplate[]) {
 void Screen::applyRoomDefaultColors(int nRoom) {
     // set per-cell color to the room default (or uncolored if roomUseColor is false)
     Color roomDefault = Color::Gray;
-    // nRoom is now 0-based: valid range 0..ROOM_COUNT-1
-    if (nRoom >= 0 && nRoom < ROOM_COUNT && roomUseColor[nRoom]) {
-        roomDefault = roomDefaultColor[nRoom];
-    } else {
-        // uncolored version choose default (Gray)
+
+    if (nRoom >= 0 && nRoom < ROOM_COUNT) {
+        // Special-case: always render room 3 (index 2) with its configured default (Black)
+        // even when coloring is globally turned off for other rooms.
+        if (nRoom == 2) {
+            roomDefault = roomDefaultColor[nRoom];
+        }
+        else if (roomUseColor[nRoom]) {
+            roomDefault = roomDefaultColor[nRoom];
+        }
+        else {
+            roomDefault = Color::Gray;
+        }
+    }
+    else {
         roomDefault = Color::Gray;
     }
 
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
+    for (int y = 0; y < MAX_Y; y++) {
+        for (int x = 0; x < MAX_X; x++) {
             cellColor[y][x] = roomDefault;
         }
     }
 }
 
 void Screen::populateLiveItemsFromRoom() {
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
+    for (int y = 0; y < MAX_Y; y++) {
+        for (int x = 0; x < MAX_X; x++) {
             char c = currentRoom[y][x];
             Point pos(x, y);
             switch (c) {
