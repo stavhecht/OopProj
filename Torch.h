@@ -12,13 +12,13 @@ public:
     Torch(const Torch&) = default;
     Torch& operator=(const Torch&) = default;
 
-    // Reveal around a center on the screen (legacy API)
+    // Reveal around a center on the screen 
     void torchEffect(Screen& screen, const Point& center);
 
-    // Return list of points lit for a given center (radius default 4)
+    // Return list of points light for a given center (radius default 4)
     std::vector<Point> litCells(const Point& center, int radius = 4) const;
 
-    // Paint entire lit area for `center` (yellow) and redraw any items in the area
+    // Paint entire light area for `center` (yellow) and redraw any items in the area
     void paintLight(Screen& screen, const Point& center, int radius = 4) const;
 
     // Paint difference between oldCenter and newCenter:

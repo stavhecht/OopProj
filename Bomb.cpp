@@ -5,8 +5,8 @@
 // Perform explosion: clear map characters, remove live items inside radius.
 void Bomb::triggerBomb(Screen& screen, const Point& center) {
     int radius = 3;
-    for (int dy = -radius; dy <= radius; ++dy) {
-        for (int dx = -radius; dx <= radius; ++dx) {
+    for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
             int distSq = dx * dx + dy * dy;
             if (distSq <= radius * radius) {
                 int x = center.getX() + dx;
@@ -31,7 +31,6 @@ void Bomb::triggerBomb(Screen& screen, const Point& center) {
 }
 
 void Bomb::onDrop(Player& /*player*/, Screen& /*screen*/) {
-    // nothing here; arming handled externally
     picked = false;
 }
 
@@ -42,11 +41,10 @@ void Bomb::arm(int ticks) {
     remainingTicks = ticks;
 }
 
-// Update all pending bombs: decrement ticks, explode those that reach zero.
-// This function must be called once per game-loop iteration (tick).
+
 bool Bomb::tick() {
     if (!armed) return false;
-    --remainingTicks;
+    remainingTicks--;
     if (remainingTicks <= 0) {
         armed = false;
         remainingTicks = 0;

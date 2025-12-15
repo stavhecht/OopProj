@@ -12,6 +12,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 
 	while (true) {
 		gotoxy(posX, posY);
+		set_color(Color::LightYellow);
 		char answer = get_single_char();
 		std::cout << answer << std::flush;
 		

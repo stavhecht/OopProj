@@ -10,61 +10,157 @@
 #include <string>
 #include <sstream>
 
-
 // Initialize buffers so currentBoard/currentRoom are populated.
 // Use setMenu() to populate currentBoard with the menu template on construction.
 Screen::Screen() {
     setMenu();
 
     // initialize cell colors to a sensible default for the whole buffer
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
+    for (int y = 0; y < MAX_Y; y++) {
+        for (int x = 0; x < MAX_X; x++) {
             cellColor[y][x] = Color::Gray;
         }
     }
 
     // initialize per-room defaults and enable coloring per-room by default
-    for (int i = 0; i < ROOM_COUNT; ++i) {
+    for (int i = 0; i < ROOM_COUNT; i++) {
         roomDefaultColor[i] = Color::Gray;
         roomUseColor[i] = false;
     }
     // set sensible defaults for the named rooms (1..3)
-    roomDefaultColor[1] = Color::LightYellow; // room 1 ambient
-    roomDefaultColor[2] = Color::Blue;   // room 2 ambient
-    roomDefaultColor[3] = Color::Gray;        // room 3 ambient
+    roomDefaultColor[0] = Color::LightYellow; 
+    roomDefaultColor[1] = Color::Blue;   
+    roomDefaultColor[2] = Color::Black;        
 
+    roomUseColor[0] = true;
     roomUseColor[1] = true;
     roomUseColor[2] = true;
-    roomUseColor[3] = true;
 
     // Keep currentRoom empty until a room is selected (setRoom will populate it).
 }
 
 Screen::~Screen() {
+    clearAndDeleteItems();
+}
+
+// --- private helpers ---
+
+void Screen::clearAndDeleteItems() {
     for (Item* it : items) {
         delete it;
     }
     items.clear();
 }
 
-// --- per-room defaults API implementations ---
+void Screen::copyTemplateToCurrentRoom(const char* const roomTemplate[]) {
+    for (int i = 0; i < MAX_Y; ++i) {
+        std::memcpy(currentRoom[i], roomTemplate[i], MAX_X + 1);
+    }
+}
+
+void Screen::applyRoomDefaultColors(int nRoom) {
+    // set per-cell color to the room default (or uncolored if roomUseColor is false)
+    Color roomDefault = Color::Gray;
+    // nRoom is now 0-based: valid range 0..ROOM_COUNT-1
+    if (nRoom >= 0 && nRoom < ROOM_COUNT && roomUseColor[nRoom]) {
+        roomDefault = roomDefaultColor[nRoom];
+    } else {
+        // uncolored version choose default (Gray)
+        roomDefault = Color::Gray;
+    }
+
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            cellColor[y][x] = roomDefault;
+        }
+    }
+}
+
+void Screen::populateLiveItemsFromRoom() {
+    for (int y = 0; y < MAX_Y; ++y) {
+        for (int x = 0; x < MAX_X; ++x) {
+            char c = currentRoom[y][x];
+            Point pos(x, y);
+            switch (c) {
+            case '!': { // torch
+                auto* torch = new Torch(pos, '!', Color::Yellow);
+                addItem(torch);
+                changePixelInRoom(pos, ' ');
+                torch->draw();
+                break;
+            }
+            case 'K': { // key
+                auto* key = new CollectableItems(pos, 'K', Color::Green);
+                addItem(key);
+                changePixelInRoom(pos, ' ');
+                break;
+            }
+            case '?': { // riddle tile
+                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
+                addItem(riddle);
+                changePixelInRoom(pos, ' ');
+                break;
+            }
+            case '@': { // bomb
+                auto* bomb = new Bomb(pos, '@', Color::Red);
+                addItem(bomb);
+                changePixelInRoom(pos, ' ');
+                break;
+            }
+            case '#': { // spring
+                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
+                addItem(spring);
+                changePixelInRoom(pos, ' ');
+                break;
+            }
+            case '*': { // obstacle 
+                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
+                addItem(obstacle);
+                changePixelInRoom(pos, ' ');
+                break;
+            }
+            case '/': { // switcher
+                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
+                addItem(switcher);
+                changePixelInRoom(pos, ' ');
+                break;
+            }
+            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
+                 auto* door = new Door(pos, c, Color::Red);
+                 addItem(door);
+                 changePixelInRoom(pos, ' ');
+                 break;
+             }
+            default:
+                break;
+            }
+        }
+    }
+}
+
+// --- end private helpers ---
+
+
+// --- per-room defaults ---
 void Screen::setRoomDefaultColor(int roomIndex, Color c) {
-    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return;
+    // now 0-based: valid indices 0..ROOM_COUNT-1
+    if (roomIndex < 0 || roomIndex >= ROOM_COUNT) return;
     roomDefaultColor[roomIndex] = c;
 }
 
 Color Screen::getRoomDefaultColor(int roomIndex) const {
-    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return Color::Gray;
+    // now 0-based: valid indices 0..ROOM_COUNT-1
+    if (roomIndex < 0 || roomIndex >= ROOM_COUNT) return Color::Gray;
     return roomDefaultColor[roomIndex];
 }
 
 void Screen::setRoomUseColor(int roomIndex, bool use) {
-    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return;
+    if (roomIndex < 0 || roomIndex >= ROOM_COUNT) return;
     roomUseColor[roomIndex] = use;
 }
 
 bool Screen::isRoomUseColor(int roomIndex) const {
-    if (roomIndex <= 0 || roomIndex >= ROOM_COUNT) return false;
+    if (roomIndex < 0 || roomIndex >= ROOM_COUNT) return false;
     return roomUseColor[roomIndex];
 }
 
@@ -94,7 +190,6 @@ void Screen::restoreStateFromPause() {
 
 // Iterate live items and update any armed Bombs. Explode bombs whose fuse reaches zero.
 void Screen::updateBombs() {
-    // iterate by index so we can erase safely
     for (size_t i = 0; i < items.size(); ) {
         Item* it = items[i];
         Bomb* b = dynamic_cast<Bomb*>(it);
@@ -107,7 +202,6 @@ void Screen::updateBombs() {
                 items.erase(items.begin() + i);
                 // trigger explosion effect at captured center
                 Bomb::triggerBomb(*this, center);
-                // do not increment i (we removed current element)
                 continue;
             }
         }
@@ -121,7 +215,6 @@ void Screen::setScoreBoard() {
     }
 }
 
-// Function to set the board to the menu state
 void Screen::setMenu() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], manuBoard[i], MAX_X + 1);
@@ -140,58 +233,24 @@ void Screen::setGamePaused() {
     }
 }
 
-// Function to set the board to the screen state from a file
-void Screen::fixBoard() {
-    for (int i = 0; i < MAX_Y; i++) {
-        strncpy_s(currentBoard[i], currentRoom[i], MAX_X + 1);
-    }
-}
 
-// Function to set the board to the no files error state
-/*void Screen::setNoFilesError() {
-    for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], noFilesErrorBoard[i], MAX_X + 1);
-    }
-}*/
 
- // Function to set the board to the guide state
 void Screen::setGuide() {
-    // Loop through all rows and copy the guide board to the current board
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], guideBoard[i], MAX_X + 1);  // Copy each row with an additional null terminator
+        memcpy(currentBoard[i], guideBoard[i], MAX_X + 1); 
     }
 }
 
-// Function to set the board to the end load state
-/*void Screen::setEndLoad() {
-    // Loop through all rows and copy the guide board to the current board
-    for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], endLoadBoard[i], MAX_X + 1);  // Copy each row with an additional null terminator
-    }
-}*/
 
-
-// Function to set the board to the Error screen state
-void Screen::setScreenError() {
-    // Loop through all rows and copy the guide board to the current board
-    for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], screenErrorBoard[i], MAX_X + 1);  // Copy each row with an additional null terminator
-    }
-}
-
-// Function to set the board to the win state
 void Screen::setWin() {
-    // Loop through all rows and copy the win board to the current board
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], winBoard[i], MAX_X + 1);  // Copy each row with an additional null terminator
+        memcpy(currentBoard[i], winBoard[i], MAX_X + 1);  
     }
 }
 
-// Function to set the board to the lose state
 void Screen::setLose() {
-    // Loop through all rows and copy the lose board to the current board
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], loseBoard[i], MAX_X + 1);  // Copy each row with an additional null terminator
+        memcpy(currentBoard[i], loseBoard[i], MAX_X + 1);  
     }
 }
 
@@ -209,7 +268,7 @@ void Screen::gobacktoMenu() {
     }
 }
 
-// Copy constructor for Screen — performs deep copy of mutable buffers and pointer copy
+// Copy ctor for Screen — performs deep copy of mutable buffers and pointer copy
 Screen::Screen(const Screen& other) {
     // copy mutable character buffers
     for (int i = 0; i < MAX_Y; ++i) {
@@ -278,8 +337,8 @@ void Screen::printRoom(Color defaultCol) const {
     gotoxy(0, 0);
 
     // Print each character using the per-cell color buffer.
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
+    for (int y = 0; y < MAX_Y; y++) {
+        for (int x = 0; x < MAX_X; x++) {
             Color c = cellColor[y][x];
             set_color(c);
             std::cout << currentRoom[y][x];
@@ -295,9 +354,9 @@ void Screen::printRoom(Color defaultCol) const {
         }
     }
 
-    // Draw registered players (if any)
+    // Draw registered players 
     if (registeredPlayers && registeredPlayerCount > 0) {
-        for (int i = 0; i < registeredPlayerCount; ++i) {
+        for (int i = 0; i < registeredPlayerCount; i++) {
             if (registeredPlayers[i].isVisible())
                 registeredPlayers[i].draw();
         }
@@ -311,8 +370,8 @@ void Screen::fixChar(char c) {
     bool found = false;
     Point res(-1, -1);
 
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
+    for (int y = 0; y < MAX_Y; y++) {
+        for (int x = 0; x < MAX_X; x++) {
             if (currentRoom[y][x] == c) {
                 if (!found) {
                     res = Point(x, y);
@@ -350,113 +409,30 @@ Point Screen::searchChar(char c) const {
 void Screen::setRoom(int nRoom) {
     // clear opened doors for the new room
     clearOpenedDoors();
-	currentRoomIndex = nRoom;
+	currentRoomIndex = nRoom - 1;
 
-    // Delete any existing live items before loading a new room to avoid dangling pointers/leaks
-    for (Item* it : items) {
-        delete it;
-    }
-    items.clear();
+    // Delete any existing live items before loading a new room
+    clearAndDeleteItems();
 
-    switch (nRoom)
+    switch (currentRoomIndex)
     {
+    case 0:
+        copyTemplateToCurrentRoom(gameRoom1);
+        break;
     case 1:
-    {
-        for (int i = 0; i < MAX_Y; i++)
-            memcpy(currentRoom[i], gameRoom1[i], MAX_X + 1);  // Copy each row with an additional null terminator
+        copyTemplateToCurrentRoom(gameRoom2);
         break;
-    }
     case 2:
-    {
-        for (int i = 0; i < MAX_Y; i++)
-            memcpy(currentRoom[i], gameRoom2[i], MAX_X + 1);
-    }   break;
-    case 3:
-    {
-        for (int i = 0; i < MAX_Y; i++)
-            memcpy(currentRoom[i], gameRoom3[i], MAX_X + 1);
+        copyTemplateToCurrentRoom(gameRoom3);
         break;
-    }
     default:
         break;
     }
 
-    // set per-cell color to the room default (or uncolored ambient if roomUseColor is false)
-    Color roomDefault = Color::Gray;
-    if (nRoom > 0 && nRoom < ROOM_COUNT && roomUseColor[nRoom]) {
-        roomDefault = roomDefaultColor[nRoom];
-    } else {
-        // uncolored version -> choose neutral ambient (Gray)
-        roomDefault = Color::Gray;
-    }
+    applyRoomDefaultColors(currentRoomIndex);
 
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
-            cellColor[y][x] = roomDefault;
-        }
-    }
-
-    // populate live items from template (unchanged)
-    for (int y = 0; y < MAX_Y; ++y) {
-        for (int x = 0; x < MAX_X; ++x) {
-            char c = currentRoom[y][x];
-            Point pos(x, y);
-            switch (c) {
-            case '!': { // torch
-                auto* torch = new Torch(pos, '!', Color::Yellow);
-                addItem(torch);
-                changePixelInRoom(pos, ' ');
-                torch->draw();
-                break;
-            }
-            case 'K': { // key
-                auto* key = new CollectableItems(pos, 'K', Color::Green);
-                addItem(key);
-                changePixelInRoom(pos, ' ');
-                break;
-            }
-            case '?': { // riddle tile
-                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
-                addItem(riddle);
-                changePixelInRoom(pos, ' ');
-                break;
-            }
-            case '@': { // bomb
-                auto* bomb = new Bomb(pos, '@', Color::Red);
-                addItem(bomb);
-                changePixelInRoom(pos, ' ');
-                break;
-            }
-            case '#': { // spring
-                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
-                addItem(spring);
-                changePixelInRoom(pos, ' ');
-                break;
-            }
-            case '*': { // obstacle 
-                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
-                addItem(obstacle);
-                changePixelInRoom(pos, ' ');
-                break;
-            }
-            case '/': { // switcher
-                auto* switcher = new SteppedOnItems(pos, '/', Color::LightPurple);
-                addItem(switcher);
-                changePixelInRoom(pos, ' ');
-                break;
-            }
-            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
-                 auto* door = new Door(pos, c, Color::Red);
-                 addItem(door);
-                 // remove template char since door is now a live object
-                 changePixelInRoom(pos, ' ');
-                 break;
-             }
-            default:
-                break;
-            }
-        }
-    }
+    
+    populateLiveItemsFromRoom();
 }
 
 Item* Screen::peekItemAt(const Point& p) const {
@@ -473,30 +449,88 @@ Item* Screen::peekItemAt(const Point& p) const {
 }
 
 
+char Screen::getCharAtcurrentRoom(const Point& p) const {
+    // Check active items first
+    for (Item* it : items) {
+        if (!it) continue;
+        Point ip = it->getPos();
+        if (ip.getX() == p.getX() && ip.getY() == p.getY())
+            return it->getCh();
+    }
+    // Fallback to template char
+    return currentRoom[p.getY()][p.getX()];
+}
+
+bool Screen::isItem(const Point& p) const {
+    // Check active items first
+    for (Item* it : items) {
+        if (!it) continue;
+        Point ip = it->getPos();
+        if (ip.getX() == p.getX() && ip.getY() == p.getY())
+            return true;
+    }
+    // no item found
+    return false;
+}
+
+bool Screen::isDoor(const Point& p) const {
+    // Check active items for Door
+    for (Item* it : items) {
+        if (!it) continue;
+        Door* d = dynamic_cast<Door*>(it);
+        if (d) {
+            Point ip = d->getPos();
+            if (ip.getX() == p.getX() && ip.getY() == p.getY())
+                return true;
+        }
+    }
+	// extra check: template char check for doors
+    char c = currentRoom[p.getY()][p.getX()];
+    return (c >= '1' && c <= '9');
+}
+
+bool Screen::isDoorOpenedAt(const Point& p) const {
+    for (const Point& dp : openedDoors) {
+        if (dp.getX() == p.getX() && dp.getY() == p.getY())
+            return true;
+    }
+    return false;
+}
+
+
 void Screen::hidePlayersInRadius(const Point& center, int radius) {
     if (!registeredPlayers || registeredPlayerCount <= 0)
         return;
-    
+
         int radiusSq = radius * radius;
     for (int i = 0; i < registeredPlayerCount; ++i) {
         Player & p = registeredPlayers[i];
+        if (!p.isVisible())
+            continue;
+
         Point pp = p.getPos();
         int dx = pp.getX() - center.getX();
         int dy = pp.getY() - center.getY();
         if (dx * dx + dy * dy <= radiusSq) {
-            if (p.isVisible()) {
-                p.setVisible(false);
-                p.setPos(Point(-1, -1));
-                
-            }            
+            p.setVisible(false);
+            p.setPos(Point(-1, -1));                
         }        
     }    
+}
+
+int Screen::getVisiblePlayerCount() const {
+    if (!registeredPlayers || registeredPlayerCount <= 0) return 0;
+    int cnt = 0;
+    for (int i = 0; i < registeredPlayerCount; ++i) {
+        if (registeredPlayers[i].isVisible()) ++cnt;
+    }
+    return cnt;
 }
 
 
 
 bool Screen::removeItemAt(const Point & p) {
-    for (auto it = items.begin(); it != items.end(); ++it) {
+    for (auto it = items.begin(); it != items.end(); it++) {
         Item * item = *it;
         if (!item) continue;
         Point ip = item->getPos();
@@ -517,25 +551,19 @@ Item* Screen::getItem(const Point& p) {
     int x = p.getX();
     int y = p.getY();
 
-    // Find a collectable item at the given position in the active items list.
-    for (auto it = items.begin(); it != items.end(); ++it) {
+    
+    for (auto it = items.begin(); it != items.end(); it++) {
         Item* item = *it;
         if (!item) continue;
         Point ip = item->getPos();
         if (ip.getX() == x && ip.getY() == y) {
             // Only CollectableItems can be picked up by player.
             CollectableItems* ci = dynamic_cast<CollectableItems*>(item);
-			SteppedOnItems* si = dynamic_cast<SteppedOnItems*>(item);
             if (ci) {
                 // transfer ownership: remove from screen list and return the pointer
                 items.erase(it);
-                // ensure room template doesn't still contain the character
                 changePixelInRoom(ip, ' ');
                 return ci;
-            }
-            else if (si) {
-                // stepped-on item, return pointer without removing from screen
-				return si;
             }
             else {
                 // not collectable
@@ -543,7 +571,6 @@ Item* Screen::getItem(const Point& p) {
             }
         }
     }
-
     // fallback: if template still contains an item char, return nullptr (no live object)
     return nullptr;
 }
@@ -556,19 +583,16 @@ Screen& Screen::operator=(Screen const& other) {
     }
 
     // delete existing items owned by this
-    for (Item* it : items) {
-        delete it;
-    }
-    items.clear();
+    clearAndDeleteItems();
 
     // copy mutable boards (char buffers)
-    for (int i = 0; i < MAX_Y; ++i) {
+    for (int i = 0; i < MAX_Y; i++) {
         std::memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
         std::memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
     }
 
-    // copy pointer-based board templates (shallow copy of pointers is correct here)
-    for (int i = 0; i < MAX_Y; ++i) {
+    // copy pointer-based board templates
+    for (int i = 0; i < MAX_Y; i++) {
         gameRoom1[i] = other.gameRoom1[i];
         gameRoom2[i] = other.gameRoom2[i];
         gameRoom3[i] = other.gameRoom3[i];
@@ -583,21 +607,21 @@ Screen& Screen::operator=(Screen const& other) {
         gamePaused[i] = other.gamePaused[i];
     }
 
-    // deep-copy items
+    // deep copy items
     for (Item* it : other.items) {
         if (it) items.push_back(it->clone());
     }
 
     // copy color buffer
-    for (int y = 0; y < MAX_Y; ++y)
-        for (int x = 0; x < MAX_X; ++x)
+    for (int y = 0; y < MAX_Y; y++)
+        for (int x = 0; x < MAX_X; x++)
             cellColor[y][x] = other.cellColor[y][x];
 
     hasSavedState = other.hasSavedState;
     if (hasSavedState) {
         for (int y = 0; y < MAX_Y; ++y) {
             std::memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
-            for (int x = 0; x < MAX_X; ++x)
+            for (int x = 0; x < MAX_X; x++)
                 savedCellColor[y][x] = other.savedCellColor[y][x];
         }
     }

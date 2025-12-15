@@ -10,12 +10,12 @@ class Player {
 	char keys[NUM_KEYS];
 	Screen& screen;
 	CollectableItems* inventory = nullptr;
-	bool visible = true; // new: track whether player is present / drawn
+	bool visible = true; 
+
 public:
 	// ctor gets start point and an array of 5 keys
 	Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room);
 
-	// Existing parameterized constructor
 	void draw();
 	void move();
 	void pickUp();
@@ -37,12 +37,20 @@ public:
 	Screen& getScreen() { return screen; }
 	const Screen& getScreen() const { return screen; }
 
-	// Visibility helpers (new)
+	// Visibility helpers
 	void setVisible(bool v);
 	bool isVisible() const { return visible; }
 
 	Player& operator=(const Point& p){pos = p; return *this;}
 	Player& operator=(const Player& other);
 
-	
+private:
+	size_t findKeyIndex(char key_pressed) const;
+
+	void handlePickupOrDispose(size_t index);
+
+	void setDirectionByIndex(size_t index);
+
+	bool canMoveTo(const Point& next) const;
+	void updateTorchOnMove(const Point& next);
 };

@@ -1,6 +1,6 @@
 #include "Point.h"
 #include "Screen.h"
-#include "Item.h" // full Item definition needed for operator=
+#include "Item.h" 
 #include <iostream>
 
 Point& Point::operator=(const Point& other) {
@@ -53,10 +53,9 @@ void Point::setDirection(Direction dir) {
 	}
 }
 
-// Copy only appearance (glyph + color) from Item into this Point.
-// Note: preserves this Point's x/y — intended for "apply item's look to a coordinate".
+// Copy only appearance (pos + sign + color) from Item into this Point.
 Point& Point::operator=(const Item& item) {
-    Point ip = item.getPos(); // use item's internal point for glyph/color
+    Point ip = item.getPos(); 
     ch = ip.getCh();
     color = ip.getColor();
     return *this;
@@ -65,6 +64,8 @@ Point& Point::operator=(const Item& item) {
 std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
+			if (dx == 0 && dy == 0)
+				continue; // skip own position
 			int newX = x + dx;
 			int newY = y + dy;
 
@@ -89,7 +90,7 @@ std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
 			int newX = x + dx;
 			int newY = y + dy;
 
-            // bounds-check: ensure we don't query screen buffers with invalid indices
+            // bounds-check
             if (newX < 0 || newX >= Screen::MAX_X || newY < 0 || newY >= Screen::MAX_Y)
                 continue;
 

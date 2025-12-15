@@ -19,7 +19,6 @@ public:
     char  getCh() const { return pos.getCh(); }
     void draw() const { pos.draw(); }
 
-    // Polymorphic clone used by Screen copy/assign
     virtual Item* clone() const { return new Item(*this); }
 
     // Called when something should happen:

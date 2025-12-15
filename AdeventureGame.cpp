@@ -1,6 +1,7 @@
 #include "AdeventureGame.h"
 #include "Bomb.h"
 #include "Console.h"
+#include <vector>
 
 AdeventureGame::AdeventureGame()
     : screen(Screen()), players{ Player(Point(10, 10, 1, 0, '$', Color::Red), "wdxase", screen),
@@ -55,64 +56,86 @@ bool AdeventureGame::waitForMenuSelection(bool &exitApp)
     return startGame;
 }
 
-void AdeventureGame::loadRoom(int currentRoom, int &movedToNextRoom)
+void AdeventureGame::loadRoom(int currentRoom, const std::vector<bool>& playersMoved)
 {
     screen.setRoom(currentRoom);
 
+    // default start positions for players in each room
+    Point startPos[2];
     if (currentRoom == 1) {
-        Point newStartPos1(10, 10, 0, 0, '$', Color::Red);
-        Point newStartPos2(15, 5, 0, 0, '&', Color::Blue);
-        players[0] = newStartPos1;
-        players[1] = newStartPos2;
+        startPos[0] = Point(10, 10, 0, 0, '$', Color::Red);
+        startPos[1] = Point(15, 5, 0, 0, '&', Color::Blue);
     }
     else if (currentRoom == 2) {
-        Point newStartPos1(31, 3, 0, 0, '$', Color::Red);
-        Point newStartPos2(34, 3, 0, 0, '&', Color::Blue);
-        players[0] = newStartPos1;
-        players[1] = newStartPos2;
+        startPos[0] = Point(31, 3, 0, 0, '$', Color::Red);
+        startPos[1] = Point(34, 3, 0, 0, '&', Color::Blue);
     }
     else if (currentRoom == 3) {
-        Point newStartPos1(2, 2, 0, 0, '$', Color::Red);
-        Point newStartPos2(2, 4, 0, 0, '&', Color::Blue);
-        players[0] = newStartPos1;
-        players[1] = newStartPos2;
+        startPos[0] = Point(2, 2, 0, 0, '$', Color::Red);
+        startPos[1] = Point(2, 4, 0, 0, '&', Color::Blue);
+    } else {
+        startPos[0] = Point(1,1,0,0,'$', Color::Red);
+        startPos[1] = Point(2,1,0,0,'&', Color::Blue);
     }
 
-    // Make both players visible and clear inventories
-    players[0].setVisible(true);
-    players[1].setVisible(true);
+    // clear inventories for all players
     for (Player& p : players) {
-		CollectableItems* inv = p.takeInventory(); // clear inventory 
-        if (inv) {
-            delete inv; 
+        CollectableItems* inv = p.takeInventory();
+        if (inv) delete inv;
+    }
+
+    // If playersMoved is empty or all false -> spawn all players.
+    bool anyMoved = false;
+    for (bool b : playersMoved) if (b) { anyMoved = true; break; }
+
+    const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
+    for (int i = 0; i < playerCount; ++i) {
+        if (!anyMoved) {
+            // initial spawn: enable both players
+            players[i] = startPos[i];
+            players[i].setVisible(true);
+        } else {
+            if (i < static_cast<int>(playersMoved.size()) && playersMoved[i]) {
+                // only spawn players that moved
+                players[i] = startPos[i];
+                players[i].setVisible(true);
+            } else {
+                // hide players that didn't move
+                players[i].setVisible(false);
+                players[i].setPos(Point(-1, -1));
+            }
         }
     }
 
-    movedToNextRoom = 0;
     screen.printRoom(); // Redraw the new room
 }
 
-void AdeventureGame::processPlayersMovement(int &currentRoom, bool &changeRoom, int &movedToNextRoom, bool &running)
+void AdeventureGame::processPlayersMovement(int &currentRoom, bool &changeRoom, std::vector<bool> &playersMoved, bool &running)
 {
-    for (auto &p : players) {
+    const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
+
+    for (int i = 0; i < playerCount; ++i) {
+        Player &p = players[i];
         if (!p.isVisible())
             continue;
 
         p.move();
 
         Point playerPos = p.getPos();
-        // if the player moved onto a previously-opened door tile, make them disappear
+        // if the player moved onto a previously-opened door tile, mark them moved and hide
         if (screen.isDoorOpenedAt(playerPos)) {
             if (p.isVisible()) {
                 p.setVisible(false);
                 p.setPos(Point(-1, -1)); // move off-screen
-                movedToNextRoom++;
+                if (i >= static_cast<int>(playersMoved.size()))
+                    playersMoved.resize(playerCount, false);
+                playersMoved[i] = true;
 
-                const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
-                if (movedToNextRoom == playerCount) {
+                // Advance room when there are no visible players left.
+                if (screen.getVisiblePlayerCount() == 0) {
                     currentRoom++;
                     changeRoom = true;
-					break; // all players moved to next room
+                    break; // all remaining players moved to next room / none remain
                 }
             }
         }
@@ -156,7 +179,7 @@ void AdeventureGame::processSteppedOnInteractions(bool &changeRoom)
             break;
         }
 
-		// Collectable items are handled at player::pickUp 
+        // Collectable items are handled at player::pickUp 
     } 
 }
 
@@ -216,16 +239,17 @@ void AdeventureGame::startNewGame()
     bool running = true;
     bool changeRoom = true;
     int currentRoom = 1;
-    int movedToNextRoom = 0; // track number of players that disappeared for current room
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
+    std::vector<bool> playersMoved(playerCount, false);
     screen.registerPlayers(players, playerCount);
 
     while (running) {
         screen.updateBombs(); // update pending bombs
+        
 
         if (changeRoom) {
             if (currentRoom == 1 || currentRoom == 2 || currentRoom == 3) {
-                loadRoom(currentRoom, movedToNextRoom);
+                loadRoom(currentRoom, playersMoved);
             }
             else if (currentRoom > 3) {
                 // Game won!
@@ -235,10 +259,12 @@ void AdeventureGame::startNewGame()
                 break;
             }
             changeRoom = false;
+            // reset moved flags for next room
+            std::fill(playersMoved.begin(), playersMoved.end(), false);
         }
 
         // Player movement and opened doors
-        processPlayersMovement(currentRoom, changeRoom, movedToNextRoom, running);
+        processPlayersMovement(currentRoom, changeRoom, playersMoved, running);
         if (changeRoom) {
             // reload next room on next iteration
             continue;
@@ -249,6 +275,22 @@ void AdeventureGame::startNewGame()
         if (changeRoom) {
             // next loop iteration will reload room
             continue;
+        }
+
+        // Only check for game-over no visible players
+        if (screen.getVisiblePlayerCount() == 0) {
+            screen.setLose();
+            screen.printBoard();
+			if (check_kbhit()) char c = get_single_char();
+            while(true) {
+                if (check_kbhit()) {
+                    char c = static_cast<char>(get_single_char());
+                    if (c == ESC) {
+                        running = false;
+                        break;
+                    }
+                }   
+            }   
         }
 
         if (!running)
@@ -266,7 +308,6 @@ void AdeventureGame::startNewGame()
 void AdeventureGame::run() {
     bool exitApp = false;
 
-    
     while (!exitApp) {
         bool startGame = waitForMenuSelection(exitApp);
         if (exitApp) {

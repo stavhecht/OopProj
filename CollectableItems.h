@@ -17,12 +17,12 @@ public:
 
     virtual void onPickUp(Player& player, Screen& screen) override {
         picked = true;
-        // e.g. torch/key: update player inventory flags here
+        
     }
 
     virtual void onDrop(Player& player, Screen& screen) override {
         picked = false;
-        // maybe nothing else
+       
     }
 
     virtual Item* clone() const override { return new CollectableItems(*this); }

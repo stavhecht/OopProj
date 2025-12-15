@@ -15,7 +15,8 @@ class Screen {
 public:
 	enum { MAX_X = 80, MAX_Y = 25 };
 	char currentBoard[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
-	char currentRoom[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
+	char currentRoom[MAX_Y][MAX_X + 1] = {}; 
+
 private:
 	vector<Item*> items;
 	vector<Point> openedDoors;
@@ -27,7 +28,7 @@ private:
 	Color cellColor[MAX_Y][MAX_X];
 
 	// Per-room default color data (index 1..3 used for rooms)
-	static constexpr int ROOM_COUNT = 4; // index 0 unused
+	static constexpr int ROOM_COUNT = 3; // index 0 unused
 	Color roomDefaultColor[ROOM_COUNT];
 	bool roomUseColor[ROOM_COUNT]; // when false, room will be "uncolored" (uses uncolored default)
 
@@ -35,6 +36,12 @@ private:
 	char savedRoom[MAX_Y][MAX_X + 1];
 	Color savedCellColor[MAX_Y][MAX_X];
 	bool hasSavedState = false;
+
+	// --- private helpers (extracted to keep setRoom / ctor logic clearer) ---
+	void clearAndDeleteItems();
+	void copyTemplateToCurrentRoom(const char* const roomTemplate[]);
+	void populateLiveItemsFromRoom();
+	void applyRoomDefaultColors(int nRoom);
 
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -76,7 +83,7 @@ private:
 		"WWWWWWWWWWWWW    WWWWWWWWWWWW         WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 5
 		"WWWWWWWWWWWWW    WWWWWWWWWWWW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 6
 		"W                   WWWW                            WWWW                       W", // 7
-		"W                                     !             WWWW                       W", // 8
+		"W                                   !               WWWW                       W", // 8
 		"W                                                   WWWW                       W", // 9
 		"W         WW        WWWWWWWW       K                2WWW                       W", // 10
 		"W         WW        WWWWWWWW                        WWWW                       W", // 11
@@ -103,26 +110,26 @@ private:
 			"W  WWWWWWWWWWWW   W   WWWWWW   WWWWWWWW      W   WWWWWWWWWWWWWWWWWW            W", // 2 
 			"W  W              W       W          W        W   W              W             W", // 3  
 			"W  W   WWWWWW W  !WWWWW   WWWWWWW    W   WWWWWW   W   WWWWWWWW   W   WWWWWW    W", // 4  
-			"W  W       W  W        W        W    W       W    W        W     W       W     W", // 5 
+			"W  W       W  W                 W    W       W    W        W     W       W     W", // 5 
 			"W  WWWWW   W  WWWWWWWWWW   WWW  WWWWWW   W   W    WWWWWWW  W  WWWWWWWW  W  WWWWW", // 6  
 			"W      W   W          W     W      W     W   W          W  W        W  W       W", // 7 
 			"WWWWW  WWWWW   WWWWW  W  WWWWWWW   WWWWWWW   WWWWW   WWWW  WWWWWWW  WWW   WWWWWW", // 8  
 			"W                  W  W        W                 W        W       W            W", // 9  
 			"W  WWWWWWWWW   W   W  WWWWWWW  WWWWWWWWWWWWWWW   WWWWWWW  WWWWWWW WWWWWWWWWW   W", // 10 
-			"W  W        W  W   W        W                 W        W       W        W      W", // 11 
+			"W  W        W  W   W        W                 W     K  W       W        W      W", // 11 
 			"W  W   WWWWWW  WWWWW  WWWWWWW  WWWWWWWWWWWWW  WWWWWW   WWWWW   WWWWW   W   WWW W", // 12 
-			"W  W       W        W        W              W       W       W       W  W      WW", // 13 
+			"W !W       W        W        W              W       W       W       W  W      WW", // 13 
 			"W  WWWWW   W  WWWW  WWWWWW   WWWWWWWWWW     WWWWW   WWWWW   WWWWW   WWWWWWWW  WW", // 14 
 			"W      W  W      W        W          W         W        W        W          W  W", // 15 
 			"WWWWW  WWWWWWWW  W  WWWWWWW  WWWWWWWW  WWWWWWWW  WWWWW  WWWWWW  WWWWWWWW   WWWWW", // 16 
-			"W         W      W       W        W            W      W        W               W", // 17 
+			"W         W      W       W        W    @       W      W        W               W", // 17 
 			"W   WWWW  W  WWWWW  WWW  WWWWWWW  WWWWWWWWWW   WWWWW  WWWWWW  WWWWWWWW   WWWWW W", // 18 
-			"W      W     W          W                W           W         W      W      W W", // 19 
+			"W      W     W          W                W    @      W         W      W      W W", // 19 
 			"WWWWW  WWWWWWW  WWWWWWWWW   WWWWWWWWWW   WWWWWWWWWWWWW  WWWWWWW WWWWWWWW  WWWW W", // 20 
 			"W         W             W           W                 W        W               W", // 21 
-			"W   WWW   W   WWWWWWW   WWWWWWW    W   WWWWWWWWWW     WWWWWWW  W   WWWWWWWWW   W", // 22 
-			"W       W                 W        W           W              W                W", // 23 
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
+			"W   WWW   W   WWWWWWW   WWWWWWW    W   WWWWWWWWWW     WWWWWWW  W   WWWWWWWWWW  W", // 22 
+			"W       W                 W        W           W              W             WW3W", // 23 
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW W"  // 24
 	};
 
 
@@ -404,7 +411,7 @@ private:
 			"W                                                                              W", // 16
 			"W                                                                              W", // 17
 			"W                                                                              W", // 18
-			"W                              PRESS ESC TO CONNOTE                           W", // 19
+			"W                              PRESS ESC TO CONNOTE                            W", // 19
 			"W                           PRESS H TO GO BACK TO MENU                         W", // 20
 			"W                                                                              W", // 21
 			"W                                                                              W", // 22
@@ -445,29 +452,11 @@ public:
 	void setGuide();
 	void setLose();
 	void setWin();
-	void setScreenError();
 	void setGamePaused();
 	void setRiddle();
 	void setRoom(int nRoom);
 	
-	// Sets the current board to the end load state
-	//void setEndLoad();
-
-
-	// Sets the current board to choose a screen state
-	//void setChooseScreen();
-
-	// Sets the current board to screen error state
 	
-
-	// Sets the current board to no files Error state
-	//void setNoFilesError();
-
-	// Sets and fix the current screen
-	//bool setScreen(int i);
-
-	// Checks if a screen is valid 
-	//bool isScreenOk(int i);
 
 	void printBoard(Color col = Color::LightYellow) const;
 	void printRoom(Color col = Color::Gray) const;
@@ -476,9 +465,7 @@ public:
 	// Searches for a specific character on the board
 	Point searchChar(char ch) const;
 
-	// Fix the current screen so all the components are valid
-	void fixBoard();
-
+	
 	// Fix a sepcific char on the screen ( deletes the bad ones )
 	void fixChar(char c);
 
@@ -499,17 +486,7 @@ public:
 
 	// Return the visible character at a room location. If a live Item occupies the tile
 	// return its character; otherwise return the template char.
-	char getCharAtcurrentRoom(const Point& p) const {
-		// Check active items first
-		for (Item* it : items) {
-			if (!it) continue;
-			Point ip = it->getPos();
-			if (ip.getX() == p.getX() && ip.getY() == p.getY())
-				return it->getCh();
-		}
-		// Fallback to template char
-		return currentRoom[p.getY()][p.getX()];
-	}
+	char getCharAtcurrentRoom(const Point& p) const;
 
 
 	void registerPlayers(Player* players, int count) { registeredPlayers = players; registeredPlayerCount = count; }
@@ -518,14 +495,12 @@ public:
 	void hidePlayersInRadius(const Point& center, int radius);
 
 
-	// Returns a newly-allocated CollectableItems* if player picks up an item at `p`.
-	// The item is removed from the activeCollectables in the loaded room.
+	
 	Item* getItem(const Point& p);
 	void  addItem(Item* item) { items.push_back(item); }
 
 
-	// Active items for the currently loaded room.
-	// Stored by value to avoid needing virtual destructor on Item.
+	
 
 	
 	Item* peekItemAt(const Point& p) const;
@@ -534,49 +509,21 @@ public:
 
 	bool removeItemAt(const Point & p);
 
-	bool isItem(const Point& p) const {
-		// Check active items first
-		for (Item* it : items) {
-			if (!it) continue;
-			Point ip = it->getPos();
-			if (ip.getX() == p.getX() && ip.getY() == p.getY())
-				return true;
-		}
-		// no item found
-		return false;
-	}
+	bool isItem(const Point& p) const;
 
-	bool isDoor(const Point& p) const {
-		// Check active items for Door
-		for (Item* it : items) {
-			if (!it) continue;
-			Door* d = dynamic_cast<Door*>(it);
-			if (d) {
-				Point ip = d->getPos();
-				if (ip.getX() == p.getX() && ip.getY() == p.getY())
-					return true;
-			}
-		}
-		// Fallback to template char
-		char c = currentRoom[p.getY()][p.getX()];
-		return (c >= '1' && c <= '9');
-	}
+	bool isDoor(const Point& p) const;
 
 	bool isWall(const Point& p) const {
 		return getCharAtcurrentRoom(p) == 'W';
 	}
 
+	int getVisiblePlayerCount() const;
+
 	// Mark a door location as opened (persist for the current room)
 	void markDoorOpened(const Point& p) { openedDoors.push_back(p); }
 
 	// Query whether a door was opened at the given point (position equality)
-	bool isDoorOpenedAt(const Point& p) const {
-		for (const Point& dp : openedDoors) {
-			if (dp.getX() == p.getX() && dp.getY() == p.getY())
-				return true;
-		}
-		return false;
-	}
+	bool isDoorOpenedAt(const Point& p) const;
 
 	// Clear opened-door registry (called when loading a new room)
 	void clearOpenedDoors() { openedDoors.clear(); }
