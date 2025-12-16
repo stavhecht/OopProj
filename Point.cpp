@@ -62,6 +62,8 @@ Point& Point::operator=(const Item& item) {
 }
 
 std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
+	// Search a square of side (2*radius+1) around this point, skipping own tile.
+	// Return position of first CollectableItems found.
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
 			if (dx == 0 && dy == 0)
@@ -74,12 +76,44 @@ std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
                 continue;
 
 			Point targetPoint(newX, newY);
-			if (screen.isItem(targetPoint)) {
-				return std::make_pair(true, targetPoint);
-			}
+			Item* it = screen.peekItemAt(targetPoint);
+			if (!it)
+				continue;
+
+            // Only consider collectable items for this query
+            CollectableItems* ci = dynamic_cast<CollectableItems*>(it);
+            if (ci) {
+                return std::make_pair(true, targetPoint);
+            }
 		}
 	}
 	return std::make_pair(false, Point(-1, -1));
+}
+
+std::pair<bool, Point> Point::SteppedOnAdjacent(Screen& screen) const {
+    // Check four orthogonal neighbours (no diagonals) for SteppedOnItems.
+    const int dx[4] = { 0, 1, 0, -1 };
+    const int dy[4] = { -1, 0, 1, 0 };
+
+    for (int i = 0; i < 4; ++i) {
+        int nx = x + dx[i];
+        int ny = y + dy[i];
+
+        if (nx < 0 || nx >= Screen::MAX_X || ny < 0 || ny >= Screen::MAX_Y)
+            continue;
+
+        Point target(nx, ny);
+        Item* it = screen.peekItemAt(target);
+        if (!it)
+            continue;
+
+        SteppedOnItems* si = dynamic_cast<SteppedOnItems*>(it);
+        if (si) {
+            return std::make_pair(true, target);
+        }
+    }
+
+    return std::make_pair(false, Point(-1, -1));
 }
 
 std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {

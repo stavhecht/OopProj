@@ -1,5 +1,4 @@
 #include "AdeventureGame.h"
-#include "Bomb.h"
 #include "Console.h"
 #include <vector>
 
@@ -148,38 +147,39 @@ void AdeventureGame::processSteppedOnInteractions(bool &changeRoom)
         if (!p.isVisible())
             continue;
 
-        auto res = p.getPos().ItemInRadios(screen, 1); // find nearby items
-        bool found = res.first;
-        if (!found)
-            continue;
+        Point playerPos = p.getPos();
 
-        Point itemPos = res.second;
-        Item* itemAtPos = screen.peekItemAt(itemPos);
-        if (!itemAtPos)
-            continue;
+        
+        auto adj = playerPos.SteppedOnAdjacent(screen);
+        if (adj.first) {
+            Item* adjItem = screen.peekItemAt(adj.second);
+            if (adjItem) {
+                SteppedOnItems* sItemAdj = dynamic_cast<SteppedOnItems*>(adjItem);
+                if (sItemAdj) {
+                    Door* door = dynamic_cast<Door*>(sItemAdj);
+                    if (door) {
+                        door->onStep(p, screen);
+                        break;
+                    }
 
-        // If it's a stepped-on type, handle accordingly
-        SteppedOnItems* sItem = dynamic_cast<SteppedOnItems*>(itemAtPos);
-        if (sItem) {
-            // Door handling 
-            Door* door = dynamic_cast<Door*>(sItem);
-            if (door) {
-                door->onStep(p, screen);
-                // after door handling we do not process other interactions for this tick
-                break;
+                    Riddle* riddle = dynamic_cast<Riddle*>(sItemAdj);
+                    if (riddle) {
+                        riddle->onStep(p, screen);
+                        break;
+                    }
+
+                    Switcher* switcher = dynamic_cast<Switcher*>(sItemAdj);
+                    if (switcher) {
+                        switcher->onStep(p, screen);
+                        break;
+                    }
+
+                    // other SteppedOnItems
+                    sItemAdj->onStep(p, screen);
+                    break;
+                }
             }
-
-            // Riddle handling
-            Riddle* riddle = dynamic_cast<Riddle*>(sItem);
-            if (riddle) {
-                riddle->onStep(p, screen);
-                break;
-            }
-
-            break;
         }
-
-        // Collectable items are handled at player::pickUp 
     } 
 }
 

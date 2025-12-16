@@ -7,6 +7,8 @@
 #include "Console.h"
 #include "Door.h"
 #include "Riddle.h"
+#include "Switcher.h"
+#include "Bomb.h"
 #include <vector>
 using std::vector;
 
@@ -46,14 +48,14 @@ private:
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
+			"WWWWWWWWWW/WWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
 			"WWWWW               WWWWWWWWW                                          W    WWWW", // 2
 			"WWWWW                                                                  W    WWWW", // 3
 			"WWWWW                                                                  W    WWWW", // 4
 			"WWWWW                                                                  W    WWWW", // 5
 			"WWWWW                                                                  W    WWWW", // 6
 			"WWWWW                                                                       WWWW", // 7
-			"WWWWW               WWWWWWWWW                                               WWWW", // 8
+			"WWWWW               WWW/WWWWW                                               WWWW", // 8
 			"WWWWW               WWWWWWWWW                                               WWWW", // 9
 			"WWWWW                                                                         1 ", // 10
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
@@ -116,7 +118,7 @@ private:
 			"WWWWW  WWWWW   WWWWW  W  WWWWWWW   WWWWWWW   WWWWW   WWWW  WWWWWWW  WWW   WWWWWW", // 8  
 			"W                  W  W        W                 W        W       W            W", // 9  
 			"W  WWWWWWWWW   W   W  WWWWWWW  WWWWWWWWWWWWWWW   WWWWWWW  WWWWWWW WWWWWWWWWW   W", // 10 
-			"W  W        W  W   W        W                 W     K  W       W        W      W", // 11 
+			"W  W        W  W   W        W                 W     K          W        W      W", // 11 
 			"W  W   WWWWWW  WWWWW  WWWWWWW  WWWWWWWWWWWWW  WWWWWW   WWWWW   WWWWW   W   WWW W", // 12 
 			"W !W       W        W        W              W       W       W       W  W      WW", // 13 
 			"W  WWWWW   W  WWWW  WWWWWW   WWWWWWWWWW     WWWWW   WWWWW   WWWWW   WWWWWWWW  WW", // 14 

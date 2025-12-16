@@ -65,6 +65,7 @@ public:
     }
 
     std::pair<bool, Point> ItemInRadios(Screen& screen, int radius) const;
+    std::pair<bool, Point> SteppedOnAdjacent(Screen& screen) const;
     std::pair<bool, Point> PlaceToDrop(Screen& screen, int radius) const;
 
 };
