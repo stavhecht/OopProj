@@ -9,6 +9,7 @@
 #include "Riddle.h"
 #include "Switcher.h"
 #include "Bomb.h"
+#include <map>
 #include <vector>
 using std::vector;
 
@@ -42,20 +43,20 @@ private:
 	// --- private helpers (extracted to keep setRoom / ctor logic clearer) ---
 	void clearAndDeleteItems();
 	void copyTemplateToCurrentRoom(const char* const roomTemplate[]);
-	void populateLiveItemsFromRoom();
+	void populateLiveItemsFromRoom(int nRoom);   // <-- updated: accept room number
 	void applyRoomDefaultColors(int nRoom);
 
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"WWWWWWWWWW/WWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
 			"WWWWW               WWWWWWWWW                                          W    WWWW", // 2
 			"WWWWW                                                                  W    WWWW", // 3
 			"WWWWW                                                                  W    WWWW", // 4
 			"WWWWW                                                                  W    WWWW", // 5
 			"WWWWW                                                                  W    WWWW", // 6
 			"WWWWW                                                                       WWWW", // 7
-			"WWWWW               WWW/WWWWW                                               WWWW", // 8
+			"WWWWW               WWWWWWWWW                                               WWWW", // 8
 			"WWWWW               WWWWWWWWW                                               WWWW", // 9
 			"WWWWW                                                                         1 ", // 10
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
@@ -78,29 +79,29 @@ private:
 	const char* gameRoom2[MAX_Y] = {
 	//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-		"WWWWWWWWWWWWW    WWWW                  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 1
-		"WWWWWWWWWWWWW    WWWWW                            WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 2
+		"WWWWWWWWWWWWW   @WWWW                  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 1
+		"WWWWWWWWWWWW/    WWWWW                            WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 2
 		"WWWWWWWWWWWWW    WWWWW  WW                        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 3
 		"WWWWWWWWWWWWW    WWWWW  WW            WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 4
 		"WWWWWWWWWWWWW    WWWWWWWWWWWW         WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 5
 		"WWWWWWWWWWWWW    WWWWWWWWWWWW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 6
 		"W                   WWWW                            WWWW                       W", // 7
-		"W                                   !               WWWW                       W", // 8
+		"W                                                   WWWW                       W", // 8
 		"W                                                   WWWW                       W", // 9
-		"W         WW        WWWWWWWW       K                2WWW                       W", // 10
+		"W         WW        WWWWWWWW                        WWWW                       W", // 10
 		"W         WW        WWWWWWWW                        WWWW                       W", // 11
 		"W         WW        WWWWWWWW                        WWWW                       W", // 12
-		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 13
-		"W         WW        WWWWWWWW                        WWW              WWW       W", // 14
-		"W         WW  WWWWWWWWWWWWW                         WWW              WWW       W", // 15
-		"W         WWWWWWWWWWWWWWW                           WWW              W         W", // 16
-		"W         WWWWWWWWWWWWWWW                           WWW              W         W", // 17
-		"W                       W                           WWW              W         W", // 18
-		"W                       W                           WWW              W         W", // 19
-		"W                       W                           WWW              W         W", // 20
-		"W                       WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW         W", // 21
-		"W                            WWW            WW              WW                 W", // 22
-		"W                            WW        WW              WW           WW         W", // 23
+		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWW/WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 13
+		"W         WW        WWWWWWWW                        WWW              WWW      WW", // 14
+		"W         WW  WWWWWWWWWWWWW                         WWW              WWW      WW", // 15
+		"W         WWW/WWWWWWWWWWW                           WWW              W        WW", // 16
+		"W         WWWWWWWWWWWWWWW                           WWW              W        WW", // 17
+		"W                      WW                           /WW              W        WW", // 18
+		"W                      WW                           WWW              W        WW", // 19
+		"W                      WW                           WWW              W        WW", // 20
+		"W                      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW        WW", // 21
+		"W                      W   W   W   W   W   W   W   W   W   W   W   W          2W", // 22
+		"W                        W   W   W   W   W   W   W   W   W   W   W   W        WW  WW", // 23
 		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
@@ -532,5 +533,14 @@ public:
 
 	// Called each game-loop tick to update armed bombs stored in `items`.
 	void updateBombs();
+
+		
+	// Check whether the provided switch requirements are satisfied in the current live items.
+    // Each requirement is (group == room number, requiredState).
+	bool areSwitchRequirementsSatisfied(const std::vector<std::pair<int, bool>>& reqs) const;
+
+	// Re-evaluate doors whose opening depends on switches. Called after switch toggles
+	// and after room wiring to auto-open SwitchesOnly doors that are already satisfied.
+	void evaluateDoorRequirements();
 };
 

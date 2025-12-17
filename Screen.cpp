@@ -5,6 +5,7 @@
 #include "Riddle.h"
 #include "Bomb.h"
 #include <cstring>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -86,7 +87,7 @@ void Screen::applyRoomDefaultColors(int nRoom) {
     }
 }
 
-void Screen::populateLiveItemsFromRoom() {
+void Screen::populateLiveItemsFromRoom(int nRoom) {
     for (int y = 0; y < MAX_Y; y++) {
         for (int x = 0; x < MAX_X; x++) {
             char c = currentRoom[y][x];
@@ -129,19 +130,20 @@ void Screen::populateLiveItemsFromRoom() {
                 changePixelInRoom(pos, ' ');
                 break;
             }
-            case '/': { // switcher
-                auto* switcher = new Switcher(pos, '/', Color::Red);
+            case '/': { // legacy ungrouped switch -> group = room number
+                auto* switcher = new Switcher(pos, '/', Color::Red, nRoom);
                 addItem(switcher);
                 changePixelInRoom(pos, ' ');
                 break;
             }
-            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
-                 auto* door = new Door(pos, c, Color::Purple);
-                 addItem(door);
-                 changePixelInRoom(pos, ' ');
-                 break;
-             }
             default:
+                // If you ever encode group using a digit/char, handle here.
+                // Current policy: all '/' switches belong to the room they are placed in (group = nRoom).
+                if (c >= '1' && c <= '9') {
+                    auto* door = new Door(pos, c, Color::Purple);
+                    addItem(door);
+                    changePixelInRoom(pos, ' ');
+                }
                 break;
             }
         }
@@ -419,7 +421,7 @@ Point Screen::searchChar(char c) const {
 void Screen::setRoom(int nRoom) {
     // clear opened doors for the new room
     clearOpenedDoors();
-	currentRoomIndex = nRoom - 1;
+    currentRoomIndex = nRoom - 1;
 
     // Delete any existing live items before loading a new room
     clearAndDeleteItems();
@@ -441,8 +443,45 @@ void Screen::setRoom(int nRoom) {
 
     applyRoomDefaultColors(currentRoomIndex);
 
-    
-    populateLiveItemsFromRoom();
+    // populate items and assign switches' group == room number
+    populateLiveItemsFromRoom(nRoom);
+
+    // Build wiring for this room only (door char -> mode and requirements)
+    std::map<char, Door::OpenMode> doorModeMap;
+    std::map<char, std::vector<std::pair<int, bool>>> doorReqMap;
+
+    if (nRoom == 1) {
+        // Room1: door '1' opens with key (legacy)
+        doorModeMap['1'] = Door::OpenMode::KeyOnly;
+    }
+    else if (nRoom == 2) {
+        // Room2: door '2' opens when all switches in room 2 are ON
+        doorModeMap['2'] = Door::OpenMode::SwitchesOnly;
+        doorReqMap['2'] = { { 2, true } }; // group = room number
+    }
+    else if (nRoom == 3) {
+        // Room3: door '3' opens with key
+        doorModeMap['3'] = Door::OpenMode::KeyOnly;
+    }
+
+    // Apply wiring: iterate live items and configure doors matching the maps.
+    for (Item* it : items) {
+        if (!it) continue;
+        Door* d = dynamic_cast<Door*>(it);
+        if (!d) continue;
+        char digit = d->getCh(); // the char used when the door was created (e.g., '1','2',...)
+        auto mIt = doorModeMap.find(digit);
+        if (mIt != doorModeMap.end()) {
+            d->setOpenMode(mIt->second);
+        }
+        auto rIt = doorReqMap.find(digit);
+        if (rIt != doorReqMap.end()) {
+            d->setSwitchRequirements(rIt->second);
+        }
+    }
+
+    // After wiring, evaluate any doors that can auto-open immediately (SwitchesOnly).
+    evaluateDoorRequirements();
 }
 
 Item* Screen::peekItemAt(const Point& p) const {
@@ -637,4 +676,70 @@ Screen& Screen::operator=(Screen const& other) {
     }
 
     return *this;
+}
+
+
+
+// Check whether the provided switch requirements are satisfied in the current live items.
+bool Screen::areSwitchRequirementsSatisfied(const std::vector<std::pair<int,bool>>& reqs) const {
+	if (reqs.empty()) return true;
+
+	// For each required (groupId, state) ensure group exists and all switches in group match state.
+	for (const auto& req : reqs) {
+		char requiredGroup = req.first;
+		bool requiredState = req.second;
+
+		bool foundAnyInGroup = false;
+		bool groupMatches = true;
+
+		for (Item* it : items) {
+			if (!it) continue;
+			const Switcher* sw = dynamic_cast<Switcher*>(it);
+			if (!sw) continue;
+			if (sw->GetGroup() == requiredGroup) {
+				foundAnyInGroup = true;
+				if (sw->IsOn() != requiredState) {
+					groupMatches = false;
+					break;
+				}
+			}
+		}
+
+		// If group not present or any switch in group does not match required state -> fail
+		if (!foundAnyInGroup || !groupMatches) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+// Open doors whose rules are purely switches-based and are now satisfied.
+// This is called after a switch toggles to automatically open matching doors.
+void Screen::evaluateDoorRequirements() {
+	// Iterate a copy of items because we may remove items while iterating.
+	std::vector<Item*> snapshot = items;
+
+	for (Item* it : snapshot) {
+		if (!it) continue;
+		Door* door = dynamic_cast<Door*>(it);
+		if (!door) continue;
+		if (door->isOpen()) continue;
+
+		// Only auto-open doors that are SwitchesOnly (not KeyOnly nor KeyAndSwitches)
+		if (door->getOpenMode() != Door::OpenMode::SwitchesOnly)
+			continue;
+
+		const auto& reqs = door->getSwitchRequirements();
+		if (areSwitchRequirementsSatisfied(reqs)) {
+			// open programmatically (Door::open alone is not enough; persist to screen)
+			door->open();
+
+			Point dp = door->getPos();
+			markDoorOpened(dp);
+			changePixelInRoom(dp, ' ');
+			removeItemAt(dp);
+			printRoom();
+		}
+	}
 }

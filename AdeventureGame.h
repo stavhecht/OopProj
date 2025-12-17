@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Player.h"
+#include "console.h"
 #include "Screen.h"
 #include <vector>
 

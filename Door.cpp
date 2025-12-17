@@ -1,29 +1,61 @@
 #include "Door.h"
 #include "Player.h"
+#include "Screen.h"
+#include "CollectableItems.h"
 
 void Door::onStep(Player& player, Screen& screen) {
-	if (!opened) {
-		CollectableItems* inventory = player.getInventory();
-		if (inventory && inventory->getCh() == 'K') {
-			open();
+    if (opened)
+        return;
 
-			// take ownership of the key and delete it (door consumes the key)
-			CollectableItems* key = player.takeInventory();
-			if (key) {
-				delete key;
-			}
+    // Evaluate switch requirements (if any)
+    bool switchesSatisfied = true;
+    if (!switchRequirements.empty()) {
+        switchesSatisfied = screen.areSwitchRequirementsSatisfied(switchRequirements);
+    }
 
-			// record the door position so future players/logic can detect it
-			screen.markDoorOpened(pos);
+    switch (openMode) {
+    case OpenMode::None:
+        open();
+        break;
 
-			// change the room template so the map shows an opened tile.
-			// do not (!) remove the Door object from the Screen's item list here,
-			// so other code can still find the Door instance and/or rely on the opened registry.
-			screen.changePixelInRoom(pos, ' ');
-			screen.removeItemAt(pos);
-			screen.printRoom();
+    case OpenMode::SwitchesOnly:
+        if (!switchesSatisfied) return;
+        open();
+        break;
 
-		}
-	}
+    case OpenMode::KeyOnly: {
+        CollectableItems* inventory = player.getInventory();
+        if (!(inventory && inventory->getCh() == 'K')) {
+            // missing key -> cannot open
+            return;
+        }
+        // consume key and open
+        open();
+        CollectableItems* key = player.takeInventory();
+        if (key) delete key;
+        break;
+    }
+
+    case OpenMode::KeyAndSwitches: {
+        if (!switchesSatisfied) return;
+        CollectableItems* inventory = player.getInventory();
+        if (!(inventory && inventory->getCh() == 'K')) {
+            // missing key -> cannot open
+            return;
+        }
+        open();
+        CollectableItems* key = player.takeInventory();
+        if (key) delete key;
+        break;
+    }
+    }
+
+    if (opened) {
+        // persist change to screen and visuals
+        screen.markDoorOpened(pos);
+        screen.changePixelInRoom(pos, ' ');
+        screen.removeItemAt(pos);
+        screen.printRoom();
+    }
 }
 

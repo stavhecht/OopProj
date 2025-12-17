@@ -13,6 +13,8 @@ void AdeventureGame::init()
     hideCursor();
 }
 
+
+
 bool AdeventureGame::waitForMenuSelection(bool &exitApp)
 {
     screen.setMenu();
@@ -159,24 +161,24 @@ void AdeventureGame::processSteppedOnInteractions(bool &changeRoom)
                     Door* door = dynamic_cast<Door*>(sItemAdj);
                     if (door) {
                         door->onStep(p, screen);
-                        break;
+                        continue;
                     }
 
                     Riddle* riddle = dynamic_cast<Riddle*>(sItemAdj);
                     if (riddle) {
                         riddle->onStep(p, screen);
-                        break;
+                        continue;
                     }
 
                     Switcher* switcher = dynamic_cast<Switcher*>(sItemAdj);
                     if (switcher) {
                         switcher->onStep(p, screen);
-                        break;
+                        continue;
                     }
 
                     // other SteppedOnItems
                     sItemAdj->onStep(p, screen);
-                    break;
+                    continue;
                 }
             }
         }
@@ -238,7 +240,7 @@ void AdeventureGame::startNewGame()
 {
     bool running = true;
     bool changeRoom = true;
-    int currentRoom = 1;
+    int currentRoom = 3;
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
     std::vector<bool> playersMoved(playerCount, false);
     screen.registerPlayers(players, playerCount);
@@ -256,6 +258,14 @@ void AdeventureGame::startNewGame()
                 screen.setWin();
                 screen.printBoard();
                 running = false;
+                while(true) {
+                    if (check_kbhit()) {
+                        char c = static_cast<char>(get_single_char());
+                        if (c == ESC) {
+                            break;
+                        }
+                    }   
+				}
                 break;
             }
             changeRoom = false;
