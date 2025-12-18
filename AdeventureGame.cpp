@@ -316,7 +316,6 @@ void AdeventureGame::startNewGame()
 }
 
 void AdeventureGame::run() {
-	init();
     bool exitApp = false;
 
     while (!exitApp) {
@@ -333,5 +332,6 @@ void AdeventureGame::run() {
     cleanup_console();
     clrscr();
 }
+
 
 
