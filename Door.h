@@ -3,7 +3,6 @@
 #include <vector>
 #include <utility>
 
-class Screen;
 
 class Door : public SteppedOnItems {
     bool opened = false;

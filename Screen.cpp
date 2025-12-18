@@ -119,13 +119,13 @@ void Screen::populateLiveItemsFromRoom(int nRoom) {
                 break;
             }
             case '#': { // spring
-                auto* spring = new SteppedOnItems(pos, '#', Color::LightGreen);
+                auto* spring = new Spring(pos, '#', Color::Gray);
                 addItem(spring);
                 changePixelInRoom(pos, ' ');
                 break;
             }
             case '*': { // obstacle 
-                auto* obstacle = new SteppedOnItems(pos, '*', Color::LightYellow);
+                auto* obstacle = new Obstacle(pos, '*', Color::Aqua);
                 addItem(obstacle);
                 changePixelInRoom(pos, ' ');
                 break;

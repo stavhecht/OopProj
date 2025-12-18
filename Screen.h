@@ -7,6 +7,8 @@
 #include "Console.h"
 #include "Door.h"
 #include "Riddle.h"
+#include "Spring.h"
+#include "Obstacle.h"
 #include "Switcher.h"
 #include "Bomb.h"
 #include <map>
@@ -49,15 +51,15 @@ private:
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
-			"WWWWW               WWWWWWWWW                                          W    WWWW", // 2
+			"WWWWWWWWWWWWWWWWWWWW#WWWWWWWW                                          W    WWWW", // 1
+			"WWWWW              W#WWWWWWWW                                          W    WWWW", // 2
 			"WWWWW                                                                  W    WWWW", // 3
 			"WWWWW                                                                  W    WWWW", // 4
-			"WWWWW                                                                  W    WWWW", // 5
-			"WWWWW                                                                  W    WWWW", // 6
-			"WWWWW                                                                       WWWW", // 7
-			"WWWWW               WWWWWWWWW                                               WWWW", // 8
-			"WWWWW               WWWWWWWWW                                               WWWW", // 9
+			"WWWWW               *                                                  W    WWWW", // 5
+			"WWWWW               *                                                  W    WWWW", // 6
+			"WWWWW               *                                                       WWWW", // 7
+			"WWWWW                WWWWWWWW                                               WWWW", // 8
+			"WWWWW                WWWWWWWW                                               WWWW", // 9
 			"WWWWW                                                                         1 ", // 10
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 12
@@ -96,7 +98,7 @@ private:
 		"W         WW  WWWWWWWWWWWWW                         WWW              WWW      WW", // 15
 		"W         WWW/WWWWWWWWWWW                           WWW              W        WW", // 16
 		"W         WWWWWWWWWWWWWWW                           WWW              W        WW", // 17
-		"W                      WW                           /WW              W        WW", // 18
+		"W                      WW                           /WW              W        /W", // 18
 		"W                      WW                           WWW              W        WW", // 19
 		"W                      WW                           WWW              W        WW", // 20
 		"W                      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW        WW", // 21
@@ -493,6 +495,8 @@ public:
 
 
 	void registerPlayers(Player* players, int count) { registeredPlayers = players; registeredPlayerCount = count; }
+	Player* getRegisteredPlayers() { return registeredPlayers; }
+	int getRegisteredPlayerCount() const { return registeredPlayerCount; }
 	
 	 // Hide any registered players whose positions are within `radius` of `center`.
 	void hidePlayersInRadius(const Point& center, int radius);

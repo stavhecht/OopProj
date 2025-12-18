@@ -4,7 +4,8 @@
 
 AdeventureGame::AdeventureGame()
     : screen(Screen()), players{ Player(Point(10, 10, 1, 0, '$', Color::Red), "wdxase", screen),
-                                Player(Point(15, 5, 0, 1, '&', Color::Blue), "ilmjko", screen) } {}
+                                Player(Point(15, 5, 0, 1, '&', Color::Blue), "ilmjko", screen) } {
+}
 
 void AdeventureGame::init()
 {
@@ -15,7 +16,7 @@ void AdeventureGame::init()
 
 
 
-bool AdeventureGame::waitForMenuSelection(bool &exitApp)
+bool AdeventureGame::waitForMenuSelection(bool& exitApp)
 {
     screen.setMenu();
     screen.printBoard();
@@ -74,9 +75,10 @@ void AdeventureGame::loadRoom(int currentRoom, const std::vector<bool>& playersM
     else if (currentRoom == 3) {
         startPos[0] = Point(2, 2, 0, 0, '$', Color::Red);
         startPos[1] = Point(2, 4, 0, 0, '&', Color::Blue);
-    } else {
-        startPos[0] = Point(1,1,0,0,'$', Color::Red);
-        startPos[1] = Point(2,1,0,0,'&', Color::Blue);
+    }
+    else {
+        startPos[0] = Point(1, 1, 0, 0, '$', Color::Red);
+        startPos[1] = Point(2, 1, 0, 0, '&', Color::Blue);
     }
 
     // clear inventories for all players
@@ -95,12 +97,14 @@ void AdeventureGame::loadRoom(int currentRoom, const std::vector<bool>& playersM
             // initial spawn: enable both players
             players[i] = startPos[i];
             players[i].setVisible(true);
-        } else {
+        }
+        else {
             if (i < static_cast<int>(playersMoved.size()) && playersMoved[i]) {
                 // only spawn players that moved
                 players[i] = startPos[i];
                 players[i].setVisible(true);
-            } else {
+            }
+            else {
                 // hide players that didn't move
                 players[i].setVisible(false);
                 players[i].setPos(Point(-1, -1));
@@ -111,12 +115,12 @@ void AdeventureGame::loadRoom(int currentRoom, const std::vector<bool>& playersM
     screen.printRoom(); // Redraw the new room
 }
 
-void AdeventureGame::processPlayersMovement(int &currentRoom, bool &changeRoom, std::vector<bool> &playersMoved, bool &running)
+void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, std::vector<bool>& playersMoved, bool& running)
 {
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
 
     for (int i = 0; i < playerCount; ++i) {
-        Player &p = players[i];
+        Player& p = players[i];
         if (!p.isVisible())
             continue;
 
@@ -143,49 +147,61 @@ void AdeventureGame::processPlayersMovement(int &currentRoom, bool &changeRoom, 
     }
 }
 
-void AdeventureGame::processSteppedOnInteractions(bool &changeRoom)
+void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
 {
-    for (auto &p : players) {
+    for (auto& p : players) {
         if (!p.isVisible())
             continue;
 
         Point playerPos = p.getPos();
 
-        
-        auto adj = playerPos.SteppedOnAdjacent(screen);
-        if (adj.first) {
-            Item* adjItem = screen.peekItemAt(adj.second);
-            if (adjItem) {
-                SteppedOnItems* sItemAdj = dynamic_cast<SteppedOnItems*>(adjItem);
-                if (sItemAdj) {
-                    Door* door = dynamic_cast<Door*>(sItemAdj);
-                    if (door) {
-                        door->onStep(p, screen);
-                        continue;
-                    }
+        // Check all 4 orthogonal neighbours and process each SteppedOnItems found.
+        const int dx[4] = { 0, 1, 0, -1 };
+        const int dy[4] = { -1, 0, 1, 0 };
 
-                    Riddle* riddle = dynamic_cast<Riddle*>(sItemAdj);
-                    if (riddle) {
-                        riddle->onStep(p, screen);
-                        continue;
-                    }
+        for (int i = 0; i < 4; ++i) {
+            int nx = playerPos.getX() + dx[i];
+            int ny = playerPos.getY() + dy[i];
 
-                    Switcher* switcher = dynamic_cast<Switcher*>(sItemAdj);
-                    if (switcher) {
-                        switcher->onStep(p, screen);
-                        continue;
-                    }
+            if (nx < 0 || nx >= Screen::MAX_X || ny < 0 || ny >= Screen::MAX_Y)
+                continue;
 
-                    // other SteppedOnItems
-                    sItemAdj->onStep(p, screen);
-                    continue;
-                }
+            Point target(nx, ny);
+            Item* adjItem = screen.peekItemAt(target);
+            if (!adjItem)
+                continue;
+
+            SteppedOnItems* sItemAdj = dynamic_cast<SteppedOnItems*>(adjItem);
+            if (!sItemAdj)
+                continue;
+
+            // Handle specific stepped-on item types first.
+            if (Door* door = dynamic_cast<Door*>(sItemAdj)) {
+                door->onStep(p, screen);
+                continue;
             }
+
+            if (Riddle* riddle = dynamic_cast<Riddle*>(sItemAdj)) {
+                riddle->onStep(p, screen);
+                continue;
+            }
+
+            if (Switcher* switcher = dynamic_cast<Switcher*>(sItemAdj)) {
+                switcher->onStep(p, screen);
+                continue;
+            }
+
+            if (Spring* spring = dynamic_cast<Spring*>(sItemAdj)) {
+                spring->onStep(p, screen);
+                continue;
+            }
+
+           
         }
-    } 
+    }
 }
 
-void AdeventureGame::handleInput(bool &running, bool &changeRoom)
+void AdeventureGame::handleInput(bool& running, bool& changeRoom)
 {
     if (!check_kbhit())
         return;
@@ -229,7 +245,7 @@ void AdeventureGame::handleInput(bool &running, bool &changeRoom)
     }
     else {
         // Normal key handling for visible players only
-        for (auto &p : players) {
+        for (auto& p : players) {
             if (p.isVisible())
                 p.handleKeyPressed(key);
         }
@@ -247,7 +263,7 @@ void AdeventureGame::startNewGame()
 
     while (running) {
         screen.updateBombs(); // update pending bombs
-        
+
 
         if (changeRoom) {
             if (currentRoom == 1 || currentRoom == 2 || currentRoom == 3) {
@@ -258,14 +274,14 @@ void AdeventureGame::startNewGame()
                 screen.setWin();
                 screen.printBoard();
                 running = false;
-                while(true) {
+                while (true) {
                     if (check_kbhit()) {
                         char c = static_cast<char>(get_single_char());
                         if (c == ESC) {
                             break;
                         }
-                    }   
-				}
+                    }
+                }
                 break;
             }
             changeRoom = false;
@@ -291,16 +307,16 @@ void AdeventureGame::startNewGame()
         if (screen.getVisiblePlayerCount() == 0) {
             screen.setLose();
             screen.printBoard();
-			if (check_kbhit()) char c = get_single_char();
-            while(true) {
+            if (check_kbhit()) char c = get_single_char();
+            while (true) {
                 if (check_kbhit()) {
                     char c = static_cast<char>(get_single_char());
                     if (c == ESC) {
                         running = false;
                         break;
                     }
-                }   
-            }   
+                }
+            }
         }
 
         if (!running)
@@ -332,6 +348,3 @@ void AdeventureGame::run() {
     cleanup_console();
     clrscr();
 }
-
-
-

@@ -9,7 +9,7 @@ class Item;   // forward declare Item for operator=
 
 class Point {
     int x = 1, y = 1;
-    int diff_x = 1, diff_y = 0;
+    int diff_x = 0, diff_y = 0;
     char ch = '*';
     Color color = Color::White;
 

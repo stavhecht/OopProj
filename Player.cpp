@@ -1,6 +1,8 @@
 #include "Player.h"
 #include "Bomb.h"
 #include "Torch.h"
+#include "Obstacle.h"
+#include "Spring.h"
 #include <cctype>
 
 Player::Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room)
@@ -18,20 +20,50 @@ Player& Player::operator=(const Player& other) {
         }
         screen = other.screen;
         inventory = other.inventory;
+        launchSpeed = other.launchSpeed;
+        launchRemaining = other.launchRemaining;
+        launchDir = other.launchDir;
         visible = other.visible;
     }
     return *this;
 }
 
-
-void Player::draw() {
-	if (!visible) return;
-    pos.draw();
+void Player::setPos(const Point& p) {
+    // keep current glyph/color, but update x/y (and keep diff_x/diff_y)
+    Point newPos(p.getX(), p.getY(), pos.getCh(), pos.getColor());
+    pos = newPos;
 }
 
 
+void Player::draw() {
+    if (!visible) return;
+    pos.draw();
+}
+
+void Player::applyLaunch(int speed, Direction dir, int duration) {
+    if (speed <= 0) return;
+    launchSpeed = speed;
+    switch (dir){
+	case Direction::UP:
+        launchDir = Direction::DOWN;
+		break;
+	case Direction::DOWN:
+        launchDir = Direction::UP;
+		break;
+	case Direction::LEFT:
+        launchDir = Direction::RIGHT;
+		break;
+	case Direction::RIGHT:
+        launchDir = Direction::LEFT;
+		break;
+    default:
+        break;
+    }
+    launchRemaining = duration;
+}
+
 void Player::pickUp() {
-	if (!visible) return;
+    if (!visible) return;
 
     auto res = pos.ItemInRadios(screen, 1);
     bool found = res.first;
@@ -61,12 +93,10 @@ void Player::pickUp() {
 
     // Redraw the room
     screen.printRoom();
-
-    // no extra torchEffect call — paintLightDiff already painted player's light
 }
 
 CollectableItems* Player::dispose() {
-	if (!visible) return nullptr;
+    if (!visible) return nullptr;
 
     if (!inventory)
         return nullptr;
@@ -82,7 +112,7 @@ CollectableItems* Player::dispose() {
     dropPos = *inventory;
     inventory->setPos(dropPos);
 
-	// item reaction
+    // item reaction
     inventory->onDrop(*this, screen);
 
     // If it's a bomb, arm it and transfer ownership to the screen
@@ -127,43 +157,254 @@ CollectableItems* Player::takeInventory() {
 }
 
 void Player::setVisible(bool v) {
-	if (visible == v) return;
+    if (visible == v) return;
 
-	if (!v) {
-		// erase current player sign from console before hiding
-		pos.draw(' ');
-	} else {
-		// if becoming visible again, draw at current pos
-		pos.draw();
-	}
-	visible = v;
+    if (!v) {
+        // erase current player sign from console before hiding
+        pos.draw(' ');
+    } else {
+        // if becoming visible again, draw at current pos
+        pos.draw();
+    }
+    visible = v;
+}
+
+static Point stepPointDirLocal(const Point& p, Direction dir) {
+    switch (dir) {
+    case Direction::UP:    return Point(p.getX(), p.getY() - 1, p.getCh(), p.getColor());
+    case Direction::RIGHT: return Point(p.getX() + 1, p.getY(), p.getCh(), p.getColor());
+    case Direction::DOWN:  return Point(p.getX(), p.getY() + 1, p.getCh(), p.getColor());
+    case Direction::LEFT:  return Point(p.getX() - 1, p.getY(), p.getCh(), p.getColor());
+    default: return p;
+    }
 }
 
 void Player::move() {
-	if (!visible) return;
+    if (!visible) return;
 
-    // compute next
+    // --- Launched movement (spring) ---
+    if (launchRemaining > 0 && launchSpeed > 0) {
+        int steps = launchSpeed;
+        for (int s = 0; s < steps; ++s) {
+            Point next = pos;
+            next = stepPointDirLocal(next, launchDir);
+
+            // blocked by wall -> stop launch
+            if (screen.isWall(next)) {
+                launchRemaining = 0;
+                launchSpeed = 0;
+                launchDir = Direction::STAY;
+                pos.draw();
+                return;
+            }
+
+            // If next contains a non-obstacle item -> stop launch (but attempt transfer to player collision)
+            if (screen.isItem(next) && !dynamic_cast<Obstacle*>(screen.peekItemAt(next))) {
+                // transfer launch if collided with other player
+                Player* reg = screen.getRegisteredPlayers();
+                int regCount = screen.getRegisteredPlayerCount();
+                if (reg && regCount > 0) {
+                    for (int i = 0; i < regCount; ++i) {
+                        Player& other = reg[i];
+                        if (&other == this) continue;
+                        if (!other.isVisible()) continue;
+                        if (other.getPos() == next) {
+                            other.applyLaunch(launchSpeed, launchDir, launchSpeed * launchSpeed);
+                        }
+                    }
+                }
+                launchRemaining = 0;
+                launchSpeed = 0;
+                launchDir = Direction::STAY;
+                pos.draw();
+                return;
+            }
+
+            // If obstacle encountered, attempt to push (launched player should be able to push)
+            Item* it = screen.peekItemAt(next);
+            Obstacle* obs = dynamic_cast<Obstacle*>(it);
+            if (obs) {
+                // derive push direction from launchDir
+                Direction pushDir = launchDir;
+
+                // Compute combined force: this player's currentForce() (will reflect launchSpeed) + cooperating players
+                int combinedForce = currentForce();
+                Player* reg = screen.getRegisteredPlayers();
+                int regCount = screen.getRegisteredPlayerCount();
+                if (reg && regCount > 0) {
+                    for (int i = 0; i < regCount; ++i) {
+                        Player& other = reg[i];
+                        if (&other == this) continue;
+                        if (!other.isVisible()) continue;
+                        Point otherPos = other.getPos();
+                        int mdx = abs(otherPos.getX() - next.getX());
+                        int mdy = abs(otherPos.getY() - next.getY());
+                        if (mdx + mdy != 1) continue;
+                        // other must be actively attempting to push into the obstacle cell
+                        Point oNext = otherPos;
+                        oNext.move();
+                        if (oNext == next) {
+                            combinedForce += other.currentForce();
+                        }
+                    }
+                }
+
+                if (Obstacle::canPushGroup(screen, next, pushDir, combinedForce)) {
+                    // perform push and move into freed cell
+                    Obstacle::pushGroup(screen, next, pushDir);
+
+                    updateTorchOnMove(next);
+                    pos.draw(' ');
+                    pos = next;
+                    pos.draw();
+
+                    // ensure visuals consistent after group push
+                    screen.printRoom();
+
+                    // after moving into the cell, check collision-transfer of launch to other player
+                    Player* reg2 = screen.getRegisteredPlayers();
+                    int regCount2 = screen.getRegisteredPlayerCount();
+                    if (reg2 && regCount2 > 0) {
+                        for (int i = 0; i < regCount2; ++i) {
+                            Player& other = reg2[i];
+                            if (&other == this) continue;
+                            if (!other.isVisible()) continue;
+                            if (other.getPos() == pos) {
+                                other.applyLaunch(launchSpeed, launchDir, launchSpeed * launchSpeed);
+                            }
+                        }
+                    }
+
+                    // consume one step of launch and continue to next step
+                    if (launchRemaining > 0) --launchRemaining;
+                    if (launchRemaining == 0) {
+                        launchSpeed = 0;
+                        launchDir = Direction::STAY;
+                        break;
+                    }
+                    continue; // continue launch loop
+                } else {
+                    // cannot push -> stop launch and stay
+                    launchRemaining = 0;
+                    launchSpeed = 0;
+                    launchDir = Direction::STAY;
+                    pos.draw();
+                    return;
+                }
+            }
+
+            // allowed: move one step (no obstacle)
+            updateTorchOnMove(next);
+            pos.draw(' ');
+            pos = next;
+            pos.draw();
+
+            // check collision transfer launch to other player at new pos
+            Player* reg = screen.getRegisteredPlayers();
+            int regCount = screen.getRegisteredPlayerCount();
+            if (reg && regCount > 0) {
+                for (int i = 0; i < regCount; ++i) {
+                    Player& other = reg[i];
+                    if (&other == this) continue;
+                    if (!other.isVisible()) continue;
+                    if (other.getPos() == pos) {
+                        other.applyLaunch(launchSpeed, launchDir, launchSpeed * launchSpeed);
+                    }
+                }
+            }
+
+            if (launchRemaining > 0) --launchRemaining;
+            if (launchRemaining == 0) {
+                launchSpeed = 0;
+                launchDir = Direction::STAY;
+                break;
+            }
+        }
+        return;
+    }
+
+    // --- Normal (non-launched) movement ---
     Point next = pos;
     next.move();
 
-    // block on walls/doors/items (like wall collision)
-    if (!canMoveTo(next)) {
-        // redraw current position and don't move
+    // If player is not attempting to move (STAY), just redraw and exit — do NOT push obstacles.
+    if (next == pos) {
         pos.draw();
         return;
     }
 
-    // if carrying a torch, update light incrementally: compute diff between pos and next
-    updateTorchOnMove(next);
+    // Block on walls
+    if (screen.isWall(next)) {
+        pos.draw();
+        return;
+    }
 
-    // erase current and move
+    // If next contains an item, only allow push when it's an Obstacle and the combined force suffices.
+    Item* it = screen.peekItemAt(next);
+    Obstacle* obs = dynamic_cast<Obstacle*>(it);
+    if (it && !obs) {
+        // some other item (door, collectable, etc.) blocks movement here; keep position
+        pos.draw();
+        return;
+    }
+
+    if (obs) {
+        // Determine push direction (from pos -> next)
+        Direction pushDir = Direction::STAY;
+        if (next.getX() - pos.getX() == 1) pushDir = Direction::RIGHT;
+        else if (next.getX() - pos.getX() == -1) pushDir = Direction::LEFT;
+        else if (next.getY() - pos.getY() == 1) pushDir = Direction::DOWN;
+        else if (next.getY() - pos.getY() == -1) pushDir = Direction::UP;
+
+        // Compute combined force: this player + any adjacent cooperating registered players
+        int combinedForce = currentForce();
+        Player* reg = screen.getRegisteredPlayers();
+        int regCount = screen.getRegisteredPlayerCount();
+        if (reg && regCount > 0) {
+            for (int i = 0; i < regCount; ++i) {
+                Player& other = reg[i];
+                if (&other == this) continue;
+                if (!other.isVisible()) continue;
+                Point otherPos = other.getPos();
+                // other must be adjacent to the obstacle cell
+                int mdx = abs(otherPos.getX() - next.getX());
+                int mdy = abs(otherPos.getY() - next.getY());
+                if (mdx + mdy != 1) continue;
+                // other must be actively attempting to push into the obstacle cell
+                Point oNext = otherPos;
+                oNext.move();
+                if (oNext == next) {
+                    combinedForce += other.currentForce();
+                }
+            }
+        }
+
+        if (Obstacle::canPushGroup(screen, next, pushDir, combinedForce)) {
+            // perform push and then move player into freed cell
+            Obstacle::pushGroup(screen, next, pushDir);
+            updateTorchOnMove(next);
+            pos.draw(' ');
+            pos = next;
+            pos.draw();
+            // refresh whole room to ensure visuals are consistent after group push
+            screen.printRoom();
+            return;
+        }
+
+        // cannot push -> stay in place
+        pos.draw();
+        return;
+    }
+
+    // Empty cell -> move normally
+    updateTorchOnMove(next);
     pos.draw(' ');
     pos = next;
     pos.draw();
 }
 
 void Player::handleKeyPressed(char key_pressed) {
-	if (!visible) return;
+    if (!visible) return;
 
     size_t index = findKeyIndex(key_pressed);
     if (index < NUM_KEYS) {

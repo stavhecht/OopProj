@@ -10,7 +10,12 @@ class Player {
 	char keys[NUM_KEYS];
 	Screen& screen;
 	CollectableItems* inventory = nullptr;
-	bool visible = true; 
+	bool visible = true;
+
+	// spring related
+	int launchSpeed = 0;
+	int launchRemaining = 0;
+	Direction launchDir = Direction::STAY;
 
 public:
 	// ctor gets start point and an array of 5 keys
@@ -31,7 +36,8 @@ public:
 	void handleKeyPressed(char key);
 
 	Point getPos() const { return pos; }
-	void setPos(const Point& p) { pos = p; }
+	// setPos preserves player's glyph/color; use operator=(Point) to replace entire appearance when needed
+	void setPos(const Point& p);
 	void setInventory(CollectableItems* item) { inventory = item; }
 
 	Screen& getScreen() { return screen; }
@@ -43,6 +49,10 @@ public:
 
 	Player& operator=(const Point& p){pos = p; return *this;}
 	Player& operator=(const Player& other);
+
+	// Launch API used by springs and collisions
+	void applyLaunch(int speed, Direction dir, int duration);
+	int currentForce() const { return (launchRemaining > 0 && launchSpeed > 0) ? launchSpeed : 1; }
 
 private:
 	size_t findKeyIndex(char key_pressed) const;
