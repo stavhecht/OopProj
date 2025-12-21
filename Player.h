@@ -63,4 +63,10 @@ private:
 
 	bool canMoveTo(const Point& next) const;
 	void updateTorchOnMove(const Point& next);
+
+	static Point nextPointFor(const Player& p);
+	static Point stepPointFrom(const Point& pt, Direction dir);
+	static bool otherIsPushingTowards(const Player& other, const Point& target);
+	static int computeCombinedForceForPush(Screen& screen, const Player& self, const Point& obstacleCell);
+	static bool tryPerformPush(Screen& screen, Player& player, const Point& next, Direction pushDir, int combinedForce, int launchSpeedIfAny, int* launchRemainingRef = nullptr);
 };

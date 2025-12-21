@@ -106,12 +106,4 @@ bool Obstacle::pushGroup(Screen& screen, const Point& start, Direction dir) {
     return true;
 }
 
-void Obstacle::onStep(Player& /*player*/, Screen& /*screen*/) {
-    // Pushing logic was previously implemented here and duplicated Player::move.
-    // For a clearer single-responsibility design the push handling is centralized in Player::move:
-    // - Player decides to move/push (has context about intended direction and cooperating players),
-    // - Player invokes Obstacle::canPushGroup / Obstacle::pushGroup as helpers.
-    //
-    // Keep this method present for backwards compatibility but do not perform pushes here.
-    return;
-}
+

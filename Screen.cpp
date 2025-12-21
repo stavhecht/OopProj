@@ -30,7 +30,7 @@ Screen::Screen() {
     }
     // set sensible defaults for the named rooms (1..3)
     roomDefaultColor[0] = Color::LightYellow; 
-    roomDefaultColor[1] = Color::Blue;   
+    roomDefaultColor[1] = Color::LightAqua;
     roomDefaultColor[2] = Color::Black;        
 
     roomUseColor[0] = true;

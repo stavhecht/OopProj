@@ -8,9 +8,7 @@ public:
         : SteppedOnItems(p, c, col) {
     }
 
-    // Attempt to react when a player steps adjacent.
-    // We override to allow pushing when the player is adjacent and pushing toward the obstacle.
-    void onStep(Player& player, Screen& screen) override;
+  
 
     // Helpers:
     // Collect connected obstacle cells (orthogonal adjacency) starting from `start`.

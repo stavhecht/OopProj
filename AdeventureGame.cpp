@@ -256,7 +256,7 @@ void AdeventureGame::startNewGame()
 {
     bool running = true;
     bool changeRoom = true;
-    int currentRoom = 1;
+    int currentRoom = 2;
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
     std::vector<bool> playersMoved(playerCount, false);
     screen.registerPlayers(players, playerCount);

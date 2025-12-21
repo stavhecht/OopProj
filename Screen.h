@@ -51,13 +51,13 @@ private:
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"WWWWWWWWWWWWWWWWWWWW#WWWWWWWW                                          W    WWWW", // 1
-			"WWWWW              W#WWWWWWWW                                          W    WWWW", // 2
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
+			"WWWWW              WWWWWWWWWW                                          W    WWWW", // 2
 			"WWWWW                                                                  W    WWWW", // 3
 			"WWWWW                                                                  W    WWWW", // 4
-			"WWWWW               *                                                  W    WWWW", // 5
-			"WWWWW               *                                                  W    WWWW", // 6
-			"WWWWW               *                                                       WWWW", // 7
+			"WWWWW                                                                  W    WWWW", // 5
+			"WWWWW                                                                  W    WWWW", // 6
+			"WWWWW                                                                       WWWW", // 7
 			"WWWWW                WWWWWWWW                                               WWWW", // 8
 			"WWWWW                WWWWWWWW                                               WWWW", // 9
 			"WWWWW                                                                         1 ", // 10
@@ -100,10 +100,10 @@ private:
 		"W         WWWWWWWWWWWWWWW                           WWW              W        WW", // 17
 		"W                      WW                           /WW              W        /W", // 18
 		"W                      WW                           WWW              W        WW", // 19
-		"W                      WW                           WWW              W        WW", // 20
-		"W                      WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW        WW", // 21
-		"W                      W   W   W   W   W   W   W   W   W   W   W   W          2W", // 22
-		"W                        W   W   W   W   W   W   W   W   W   W   W   W        WW  WW", // 23
+		"W             WWWW   WWWW                           WWW              W        WW", // 20
+		"W             W##  ** WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW        WW", // 21
+		"W             WWWWW    W   W   W   W   W   W   W   W   W   W   W   W          2W", // 22
+		"W             WWWWW      W   W   W   W   W   W   W   W   W   W   W   W        WW", // 23
 		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
@@ -440,7 +440,7 @@ public:
 	Color getCellColor(const Point& p) const { if (p.getX() >= 0 && p.getX() < MAX_X && p.getY() >= 0 && p.getY() < MAX_Y) return cellColor[p.getY()][p.getX()]; return Color::LightYellow; }
 	int getCurrentRoomIndex() const { return currentRoomIndex; }
 
-	// Per-room defaults API
+	// Per-room defaults
 	void setRoomDefaultColor(int roomIndex, Color c);
 	Color getRoomDefaultColor(int roomIndex) const;
 	void setRoomUseColor(int roomIndex, bool use);

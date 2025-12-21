@@ -131,7 +131,6 @@
     <ClCompile Include="AdeventureGame.cpp" />
     <ClCompile Include="AdventureGameProj.cpp" />
     <ClCompile Include="Bomb.cpp" />
-    <ClCompile Include="C++ AdeventureGame.cpp" />
     <ClCompile Include="CollectableItems.cpp" />
     <ClCompile Include="Console.cpp" />
     <ClCompile Include="Door.cpp" />
@@ -151,7 +150,6 @@
     <ClInclude Include="Bomb.h" />
     <ClInclude Include="CollectableItems.h" />
     <ClInclude Include="Console.h" />
-    <ClInclude Include="diff Screen.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="Door.h" />
     <ClInclude Include="Item.h" />
@@ -164,6 +162,10 @@
     <ClInclude Include="SteppedOnItems.h" />
     <ClInclude Include="Switcher.h" />
     <ClInclude Include="Torch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="bonus.txt" />
+    <Text Include="readme.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
