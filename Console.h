@@ -263,4 +263,3 @@ inline void reset_color() {
 }
 
 #endif // _CONSOLE_H_
-
