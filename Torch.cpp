@@ -10,8 +10,8 @@ void Torch::torchEffect(Screen& screen, const Point& center) {
     paintLight(screen, center, 4);
 }
 
-std::vector<Point> Torch::litCells(const Point& center, int radius) const {
-    std::vector<Point> out;
+vector<Point> Torch::litCells(const Point& center, int radius) const {
+    vector<Point> out;
     int cx = center.getX();
     int cy = center.getY();
     int minX = max(0, cx - radius);
@@ -19,8 +19,11 @@ std::vector<Point> Torch::litCells(const Point& center, int radius) const {
     int minY = max(0, cy - radius);
     int maxYc = min(Screen::MAX_Y - 1, cy + radius);
 
-    for (int y = minY; y <= maxYc; ++y) {
-        for (int x = minX; x <= maxXc; ++x) {
+    for (int y = minY; y <= maxYc; y++) {
+        // do not light any row with y > 22 (display row)
+        if (y > 22) continue;
+
+        for (int x = minX; x <= maxXc; x++) {
             int dx = x - cx;
             int dy = y - cy;
             if (dx * dx + dy * dy <= radius * radius) {

@@ -2,10 +2,34 @@
 #include "Console.h"
 #include <vector>
 
+
+
+    // Return default start position for a given room/player
+Point AdeventureGame::GetStartPosForRoom(int room, int playerIndex){
+    if (room == 1) {
+        return (playerIndex == 0) ? Point(10, 10, 0, 0, '$', Color::Red)
+                                    : Point(15, 5, 0, 0, '&', Color::Blue);
+    }
+    else if (room == 2) {
+        return (playerIndex == 0) ? Point(31, 3, 0, 0, '$', Color::Red)
+                                    : Point(34, 3, 0, 0, '&', Color::Blue);
+    }
+    else if (room == 3) {
+        return (playerIndex == 0) ? Point(2, 2, 0, 0, '$', Color::Red)
+                                    : Point(2, 4, 0, 0, '&', Color::Blue);
+    }
+
+    // fallback
+    return (playerIndex == 0) ? Point(1, 1, 0, 0, '$', Color::Red)
+                                    : Point(2, 1, 0, 0, '&', Color::Blue);
+    }
+
+
 AdeventureGame::AdeventureGame()
-    : screen(Screen()), players{ Player(Point(10, 10, 1, 0, '$', Color::Red), "wdxase", screen),
-                                Player(Point(15, 5, 0, 1, '&', Color::Blue), "ilmjko", screen) } {
-}
+    : screen(Screen())
+    , players{ Player(Point(10, 10, 1, 0, '$', Color::Red), "wdxase", screen),
+               Player(Point(15, 5, 0, 1, '&', Color::Blue), "ilmjko", screen) }
+{}
 
 void AdeventureGame::init()
 {
@@ -14,17 +38,17 @@ void AdeventureGame::init()
     hideCursor();
 }
 
-
-
 bool AdeventureGame::waitForMenuSelection(bool& exitApp)
 {
     screen.setMenu();
     screen.printBoard();
+
     bool startGame = false;
 
     while (!startGame && !exitApp) {
         if (check_kbhit()) {
             char key = static_cast<char>(get_single_char());
+
             if (key == '1') {
                 startGame = true; // start the game loop
             }
@@ -52,67 +76,99 @@ bool AdeventureGame::waitForMenuSelection(bool& exitApp)
                 break;
             }
         }
+
         sleep_ms(50);
     }
 
     return startGame;
 }
 
-void AdeventureGame::loadRoom(int currentRoom, const std::vector<bool>& playersMoved)
+void AdeventureGame::loadRoom(int currentRoom, const vector<bool>& playersMoved)
 {
     screen.setRoom(currentRoom);
 
-    // default start positions for players in each room
+    // compute start positions for the room (only for players with lives)
     Point startPos[2];
-    if (currentRoom == 1) {
-        startPos[0] = Point(10, 10, 0, 0, '$', Color::Red);
-        startPos[1] = Point(15, 5, 0, 0, '&', Color::Blue);
+    const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
+
+    if (currentRoom == 1 || currentRoom == 2 || currentRoom == 3) {
+        for (int i = 0; i < playerCount; ++i) {
+            if (players[i].getLifes() > 0) {
+                startPos[i] = GetStartPosForRoom(currentRoom, i);
+            }
+        }
     }
-    else if (currentRoom == 2) {
-        startPos[0] = Point(31, 3, 0, 0, '$', Color::Red);
-        startPos[1] = Point(34, 3, 0, 0, '&', Color::Blue);
-    }
-    else if (currentRoom == 3) {
-        startPos[0] = Point(2, 2, 0, 0, '$', Color::Red);
-        startPos[1] = Point(2, 4, 0, 0, '&', Color::Blue);
-    }
-    else {
-        startPos[0] = Point(1, 1, 0, 0, '$', Color::Red);
-        startPos[1] = Point(2, 1, 0, 0, '&', Color::Blue);
-    }
+
+    // helper lambdas
+    auto clearInventory = [](Player& pl) {
+        CollectableItems* inv = pl.takeInventory();
+        if (inv) delete inv;
+    };
+
+    auto hidePlayer = [](Player& pl) {
+        pl.setVisible(false);
+        pl.setPos(Point(-1, -1));
+    };
 
     // clear inventories for all players
     for (Player& p : players) {
-        CollectableItems* inv = p.takeInventory();
-        if (inv) delete inv;
+        clearInventory(p);
     }
 
     // If playersMoved is empty or all false -> spawn all players.
     bool anyMoved = false;
-    for (bool b : playersMoved) if (b) { anyMoved = true; break; }
+    for (bool b : playersMoved) {
+        if (b) { anyMoved = true; break; }
+    }
 
-    const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
     for (int i = 0; i < playerCount; ++i) {
         if (!anyMoved) {
-            // initial spawn: enable both players
-            players[i] = startPos[i];
-            players[i].setVisible(true);
+            // initial spawn: enable players only if they have lives
+            if (players[i].getLifes() > 0) {
+                players[i] = startPos[i];
+                players[i].setVisible(true);
+            } else {
+                hidePlayer(players[i]);
+            }
         }
         else {
             if (i < static_cast<int>(playersMoved.size()) && playersMoved[i]) {
                 // only spawn players that moved
-                players[i] = startPos[i];
-                players[i].setVisible(true);
+                if (players[i].getLifes() > 0) {
+                    players[i] = startPos[i];
+                    players[i].setVisible(true);
+                } else {
+                    hidePlayer(players[i]);
+                }
             }
             else {
                 // hide players that didn't move
-                players[i].setVisible(false);
-                players[i].setPos(Point(-1, -1));
+                hidePlayer(players[i]);
             }
         }
     }
 
-    screen.printRoom(); // Redraw the new room
+    // Detect life drops and respawn affected players
+    bool anyRespawned = false;
+    for (int i = 0; i < playerCount; ++i) {
+        if (players[i].hasDied()) {
+            if (players[i].getLifes() > 0) {
+                Point sp = GetStartPosForRoom(currentRoom, i);
+                players[i] = sp;
+                players[i].setVisible(true);
+            } else {
+                hidePlayer(players[i]);
+            }
+
+            // clear inventory (consistent with loadRoom behavior)
+            clearInventory(players[i]);
+            anyRespawned = true;
+        }
+    }
+
+    // Always print the room once after load/respawn so the display is consistent.
+    screen.printRoom();
+    (void)anyRespawned; // keep variable if future logic needs it
 }
 
 void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, std::vector<bool>& playersMoved, bool& running)
@@ -129,19 +185,18 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
         Point playerPos = p.getPos();
         // if the player moved onto a previously-opened door tile, mark them moved and hide
         if (screen.isDoorOpenedAt(playerPos)) {
-            if (p.isVisible()) {
-                p.setVisible(false);
-                p.setPos(Point(-1, -1)); // move off-screen
-                if (i >= static_cast<int>(playersMoved.size()))
-                    playersMoved.resize(playerCount, false);
-                playersMoved[i] = true;
+            p.setVisible(false);
+            p.setPos(Point(-1, -1)); // move off-screen
 
-                // Advance room when there are no visible players left.
-                if (screen.getVisiblePlayerCount() == 0) {
-                    currentRoom++;
-                    changeRoom = true;
-                    break; // all remaining players moved to next room / none remain
-                }
+            if (i >= static_cast<int>(playersMoved.size()))
+                playersMoved.resize(playerCount, false);
+            playersMoved[i] = true;
+
+            // Advance room when there are no visible players left.
+            if (screen.getVisiblePlayerCount() == 0) {
+                ++currentRoom;
+                changeRoom = true;
+                break; // all remaining players moved to next room / none remain
             }
         }
     }
@@ -149,6 +204,9 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
 
 void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
 {
+    const int dx[4] = { 0, 1, 0, -1 };
+    const int dy[4] = { -1, 0, 1, 0 };
+
     for (auto& p : players) {
         if (!p.isVisible())
             continue;
@@ -156,9 +214,6 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
         Point playerPos = p.getPos();
 
         // Check all 4 orthogonal neighbours and process each SteppedOnItems found.
-        const int dx[4] = { 0, 1, 0, -1 };
-        const int dy[4] = { -1, 0, 1, 0 };
-
         for (int i = 0; i < 4; ++i) {
             int nx = playerPos.getX() + dx[i];
             int ny = playerPos.getY() + dy[i];
@@ -175,7 +230,7 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
             if (!sItemAdj)
                 continue;
 
-            // Handle specific stepped-on item types first.
+            // Handle specific stepped-on item types.
             if (Door* door = dynamic_cast<Door*>(sItemAdj)) {
                 door->onStep(p, screen);
                 continue;
@@ -195,8 +250,6 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
                 spring->onStep(p, screen);
                 continue;
             }
-
-           
         }
     }
 }
@@ -256,14 +309,43 @@ void AdeventureGame::startNewGame()
 {
     bool running = true;
     bool changeRoom = true;
-    int currentRoom = 2;
+    int currentRoom = 1;
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
     std::vector<bool> playersMoved(playerCount, false);
+
     screen.registerPlayers(players, playerCount);
 
     while (running) {
         screen.updateBombs(); // update pending bombs
 
+        // Detect which players lost a life this tick (consume the event via hasDied())
+        vector<int> diedIndices;
+        for (int i = 0; i < playerCount; ++i) {
+            if (players[i].hasDied()) {
+                diedIndices.push_back(i);
+            }
+        }
+
+        // If any player died -> respawn them without reloading the room (keep room state)
+        if (!diedIndices.empty()) {
+            for (int idx : diedIndices) {
+                if (players[idx].getLifes() > 0) {
+                    Point sp = GetStartPosForRoom(currentRoom, idx);
+                    players[idx] = sp;
+                    players[idx].setVisible(true);
+                } else {
+                    players[idx].setVisible(false);
+                    players[idx].setPos(Point(-1, -1));
+                }
+
+                // clear inventory consistent with loadRoom semantics
+                CollectableItems* inv = players[idx].takeInventory();
+                if (inv) delete inv;
+            }
+
+            // update visuals once after all respawns
+            screen.printRoom();
+        }
 
         if (changeRoom) {
             if (currentRoom == 1 || currentRoom == 2 || currentRoom == 3) {
@@ -286,7 +368,7 @@ void AdeventureGame::startNewGame()
             }
             changeRoom = false;
             // reset moved flags for next room
-            std::fill(playersMoved.begin(), playersMoved.end(), false);
+            fill(playersMoved.begin(), playersMoved.end(), false);
         }
 
         // Player movement and opened doors
@@ -339,7 +421,18 @@ void AdeventureGame::run() {
         if (exitApp) {
             break;
         }
+
         if (startGame) {
+            // Prepare players for a fresh game start without changing game-loop logic.
+            // Clear any leftover inventory, reset lifes and hide them (loadRoom will position/ show as needed).
+            for (Player& p : players) {
+                CollectableItems* inv = p.takeInventory();
+                if (inv) delete inv;
+                p.resetLifes();            // reset life counters
+                p.setVisible(false);      // will be positioned/shown by loadRoom
+                p.setPos(Point(-1, -1));  // keep off-screen until loadRoom runs
+            }
+
             startNewGame();
         }
     }

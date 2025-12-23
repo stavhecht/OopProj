@@ -185,7 +185,12 @@ inline void init_console() {
 #ifdef PLATFORM_UNIX
     init_terminal();
 #endif
-    // Windows doesn't need initialization
+#ifdef PLATFORM_WINDOWS
+    // Ensure the console uses UTF-8 for both input and output on Windows.
+    // Do this once during initialization rather than every draw call.
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
 }
 
 /**
@@ -204,6 +209,8 @@ enum class Color { Black, Blue, Green, Aqua, Red, Purple, Yellow, White, Gray, L
 
 
 extern bool g_colors_enabled;
+std::string build_hearts(int lifes);
+
 
 // Helpers to control colors
 inline void set_colors_enabled(bool enabled) { g_colors_enabled = enabled; }

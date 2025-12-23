@@ -11,6 +11,8 @@ class Player {
 	Screen& screen;
 	CollectableItems* inventory = nullptr;
 	bool visible = true;
+	int lifes = 3;
+	int lastKnownlifes = 3;
 
 	// spring related
 	int launchSpeed = 0;
@@ -46,6 +48,11 @@ public:
 	// Visibility helpers
 	void setVisible(bool v);
 	bool isVisible() const { return visible; }
+
+	int getLifes() const { return lifes; }
+	void resetLifes(int n = 3) { lifes = n; lastKnownlifes = n; }
+	void playerdead() { lifes--; }
+	bool hasDied();
 
 	Player& operator=(const Point& p){pos = p; return *this;}
 	Player& operator=(const Player& other);

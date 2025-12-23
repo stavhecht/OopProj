@@ -55,7 +55,7 @@ void Screen::clearAndDeleteItems() {
 
 void Screen::copyTemplateToCurrentRoom(const char* const roomTemplate[]) {
     for (int i = 0; i < MAX_Y; ++i) {
-        std::memcpy(currentRoom[i], roomTemplate[i], MAX_X + 1);
+        memcpy(currentRoom[i], roomTemplate[i], MAX_X + 1);
     }
 }
 
@@ -180,7 +180,7 @@ bool Screen::isRoomUseColor(int roomIndex) const {
 void Screen::saveStateForPause() {
     // save current room chars
     for (int y = 0; y < MAX_Y; ++y) {
-        std::memcpy(savedRoom[y], currentRoom[y], MAX_X + 1);
+        memcpy(savedRoom[y], currentRoom[y], MAX_X + 1);
         // save per-cell colors
         for (int x = 0; x < MAX_X; ++x) {
             savedCellColor[y][x] = cellColor[y][x];
@@ -192,7 +192,7 @@ void Screen::saveStateForPause() {
 void Screen::restoreStateFromPause() {
     if (!hasSavedState) return;
     for (int y = 0; y < MAX_Y; ++y) {
-        std::memcpy(currentRoom[y], savedRoom[y], MAX_X + 1);
+        memcpy(currentRoom[y], savedRoom[y], MAX_X + 1);
         for (int x = 0; x < MAX_X; ++x) {
             cellColor[y][x] = savedCellColor[y][x];
         }
@@ -284,8 +284,8 @@ void Screen::gobacktoMenu() {
 Screen::Screen(const Screen& other) {
     // copy mutable character buffers
     for (int i = 0; i < MAX_Y; ++i) {
-        std::memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
-        std::memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
+        memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
+        memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
     }
 
     // copy the pointer-based template boards (string literals) — shallow copy of pointers is correct
@@ -318,7 +318,7 @@ Screen::Screen(const Screen& other) {
     hasSavedState = other.hasSavedState;
     if (hasSavedState) {
         for (int y = 0; y < MAX_Y; ++y) {
-            std::memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
+            memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
             for (int x = 0; x < MAX_X; ++x)
                 savedCellColor[y][x] = other.savedCellColor[y][x];
         }
@@ -335,14 +335,14 @@ void Screen::printBoard(Color col) const {
     // For boards (menu, paused, etc.) we keep previous behaviour: single color for whole board
     set_color(col);
 
-    for (int y = 0; y < MAX_Y - 1; ++y) {
-        std::cout << currentBoard[y] << '\n';
+    for (int y = 0; y < MAX_Y - 1; y++) {
+        cout << currentBoard[y] << '\n';
     }
-    std::cout << currentBoard[MAX_Y - 1];
+    cout << currentBoard[MAX_Y - 1];
     reset_color();
 }
 
-void Screen::printRoom(Color defaultCol) const {
+void Screen::printRoom(Color defaultCol)const {
     // Move the cursor to the top-left corner
     system("cls");
 
@@ -352,10 +352,13 @@ void Screen::printRoom(Color defaultCol) const {
     for (int y = 0; y < MAX_Y; y++) {
         for (int x = 0; x < MAX_X; x++) {
             Color c = cellColor[y][x];
+            if (c == Color::Gray) {
+                c = defaultCol;
+            }
             set_color(c);
-            std::cout << currentRoom[y][x];
+            cout << currentRoom[y][x];
         }
-        if (y < MAX_Y - 1) std::cout << '\n';
+        if (y < MAX_Y - 1) cout << '\n';
     }
     reset_color();
 
@@ -366,6 +369,7 @@ void Screen::printRoom(Color defaultCol) const {
         }
     }
 
+    printPlayersinfo();
     // Draw registered players 
     if (registeredPlayers && registeredPlayerCount > 0) {
         for (int i = 0; i < registeredPlayerCount; i++) {
@@ -373,7 +377,75 @@ void Screen::printRoom(Color defaultCol) const {
                 registeredPlayers[i].draw();
         }
     }
+
+	reset_color();
 }
+
+
+void Screen::printPlayersinfo() const {
+    Point dis = searchChar('L'); // legend top-left marker
+    if (dis.getX() < 0 || dis.getY() < 0 || !registeredPlayers || registeredPlayerCount <= 0) return;
+
+    const int startX = dis.getX();
+    const int startY = dis.getY() + 1;
+    if (startX < 0 || startX >= MAX_X || startY < 0 || startY >= MAX_Y) return;
+
+    const int gapSpaces = 20; // spaces between players
+    int curCol = startX;
+
+    for (int i = 0; i < registeredPlayerCount && curCol < MAX_X; i++) {
+        const Player& p = registeredPlayers[i];
+
+        // ensure we position the console cursor before printing each player's block
+        gotoxy(curCol, startY);
+
+        // Build text pieces
+        string prefix = "P" + to_string(i + 1) + " lives = ";
+        string hearts = build_hearts(p.getLifes());
+
+        // Inventory char and color (fallback to '-' and White)
+        char invCh = '-';
+        Color invColor = Color::White;
+        CollectableItems* inv = p.getInventory();
+        if (inv) {
+            invCh = inv->getCh();
+            invColor = inv->getPos().getColor();
+        }
+
+        // Create a single ASCII block to measure printed width (safe for ASCII output)
+        string block = prefix + hearts + " inv " + string(1, invCh);
+        int printed = static_cast<int>(block.size());
+
+        // Print prefix + hearts in player's color
+        Color playerColor = p.getPos().getColor();
+        set_color(playerColor);
+        cout << prefix << hearts;
+
+        // separator + "inv "
+        cout << ' ' << "inv ";
+
+        // print inventory char in its color (or '-' in white)
+        set_color(invColor);
+        cout << invCh;
+        reset_color();
+
+        // compute remaining space on the line and print gap spaces (do not overflow)
+        int remainingCols = MAX_X - (curCol + printed);
+        int spacesToPrint = 0;
+        if (remainingCols > 0) {
+            spacesToPrint = min(gapSpaces, remainingCols);
+            for (int s = 0; s < spacesToPrint; ++s) cout << ' ';
+        }
+
+        // advance curCol for the next player
+        curCol += printed + spacesToPrint;
+    }
+
+    // Ensure color reset and flush
+    reset_color();
+    cout.flush();
+}
+
 
 // Function to search for a specific character on the board delete if there are duplicates
 // Fix duplicates of character `c` in the currentRoom/currentBoard.
@@ -447,8 +519,8 @@ void Screen::setRoom(int nRoom) {
     populateLiveItemsFromRoom(nRoom);
 
     // Build wiring for this room only (door char -> mode and requirements)
-    std::map<char, Door::OpenMode> doorModeMap;
-    std::map<char, std::vector<std::pair<int, bool>>> doorReqMap;
+    map<char, Door::OpenMode> doorModeMap;
+    map<char, vector<pair<int, bool>>> doorReqMap;
 
     if (nRoom == 1) {
         // Room1: door '1' opens with key (legacy)
@@ -552,7 +624,7 @@ void Screen::hidePlayersInRadius(const Point& center, int radius) {
         return;
 
         int radiusSq = radius * radius;
-    for (int i = 0; i < registeredPlayerCount; ++i) {
+    for (int i = 0; i < registeredPlayerCount; i++) {
         Player & p = registeredPlayers[i];
         if (!p.isVisible())
             continue;
@@ -562,6 +634,7 @@ void Screen::hidePlayersInRadius(const Point& center, int radius) {
         int dy = pp.getY() - center.getY();
         if (dx * dx + dy * dy <= radiusSq) {
             p.setVisible(false);
+			p.playerdead();
             p.setPos(Point(-1, -1));                
         }        
     }    
@@ -570,7 +643,7 @@ void Screen::hidePlayersInRadius(const Point& center, int radius) {
 int Screen::getVisiblePlayerCount() const {
     if (!registeredPlayers || registeredPlayerCount <= 0) return 0;
     int cnt = 0;
-    for (int i = 0; i < registeredPlayerCount; ++i) {
+    for (int i = 0; i < registeredPlayerCount; i++) {
         if (registeredPlayers[i].isVisible()) ++cnt;
     }
     return cnt;
@@ -636,8 +709,8 @@ Screen& Screen::operator=(Screen const& other) {
 
     // copy mutable boards (char buffers)
     for (int i = 0; i < MAX_Y; i++) {
-        std::memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
-        std::memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
+        memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
+        memcpy(currentRoom[i], other.currentRoom[i], MAX_X + 1);
     }
 
     // copy pointer-based board templates
@@ -669,7 +742,7 @@ Screen& Screen::operator=(Screen const& other) {
     hasSavedState = other.hasSavedState;
     if (hasSavedState) {
         for (int y = 0; y < MAX_Y; ++y) {
-            std::memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
+            memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
             for (int x = 0; x < MAX_X; x++)
                 savedCellColor[y][x] = other.savedCellColor[y][x];
         }
@@ -681,7 +754,7 @@ Screen& Screen::operator=(Screen const& other) {
 
 
 // Check whether the provided switch requirements are satisfied in the current live items.
-bool Screen::areSwitchRequirementsSatisfied(const std::vector<std::pair<int,bool>>& reqs) const {
+bool Screen::areSwitchRequirementsSatisfied(const vector<pair<int,bool>>& reqs) const {
 	if (reqs.empty()) return true;
 
 	// For each required (groupId, state) ensure group exists and all switches in group match state.
@@ -718,7 +791,7 @@ bool Screen::areSwitchRequirementsSatisfied(const std::vector<std::pair<int,bool
 // This is called after a switch toggles to automatically open matching doors.
 void Screen::evaluateDoorRequirements() {
 	// Iterate a copy of items because we may remove items while iterating.
-	std::vector<Item*> snapshot = items;
+	vector<Item*> snapshot = items;
 
 	for (Item* it : snapshot) {
 		if (!it) continue;

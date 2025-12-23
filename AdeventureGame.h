@@ -15,10 +15,11 @@ private:
     bool waitForMenuSelection(bool &exitApp);
     void startNewGame();
     // playersMoved: vector sized to number of players; true = that player moved to next room
-    void loadRoom(int currentRoom, const std::vector<bool>& playersMoved);
-    void processPlayersMovement(int &currentRoom, bool &changeRoom, std::vector<bool> &playersMoved, bool &running);
+    void loadRoom(int currentRoom, const vector<bool>& playersMoved);
+    void processPlayersMovement(int &currentRoom, bool &changeRoom, vector<bool> &playersMoved, bool &running);
     void processSteppedOnInteractions(bool &changeRoom);
     void handleInput(bool &running, bool &changeRoom);
+    static Point GetStartPosForRoom(int room, int playerIndex);
 
 public:
     AdeventureGame();

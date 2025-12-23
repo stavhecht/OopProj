@@ -18,6 +18,18 @@ Point Player::nextPointFor(const Player& p) {
     return np;
 }
 
+ bool Player::hasDied() {
+    if (lifes < lastKnownlifes) {
+        lastKnownlifes = lifes;
+        return true;
+        
+    }
+        // update stored value in case life increased or unchanged
+    lastKnownlifes = lifes;
+    return false;
+    
+}
+
 // Return the point that results from stepping `pt` one cell in `dir`
 Point Player::stepPointFrom(const Point& pt, Direction dir) {
     Point np = pt;
@@ -37,8 +49,8 @@ Point Player::stepPointFrom(const Point& pt, Direction dir) {
 bool Player::otherIsPushingTowards(const Player& other, const Point& target) {
     if (!other.isVisible()) return false;
     const Point otherPos = other.getPos();
-    int mdx = std::abs(otherPos.getX() - target.getX());
-    int mdy = std::abs(otherPos.getY() - target.getY());
+    int mdx = abs(otherPos.getX() - target.getX());
+    int mdy = abs(otherPos.getY() - target.getY());
     if (mdx + mdy != 1) return false; // must be orthogonally adjacent
 
     Point oNext = otherPos;
@@ -101,6 +113,7 @@ Player::Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& 
     for (int i = 0; i < NUM_KEYS; ++i) {
         keys[i] = the_keys[i];
     }
+	lastKnownlifes = lifes;
 }
 
 Player& Player::operator=(const Player& other) {
@@ -466,7 +479,7 @@ void Player::handleKeyPressed(char key_pressed) {
 size_t Player::findKeyIndex(char key_pressed) const {
     size_t index = 0;
     for (char k : keys) {
-        if (std::tolower(static_cast<unsigned char>(k)) == std::tolower(static_cast<unsigned char>(key_pressed))) {
+        if (tolower(static_cast<unsigned char>(k)) == tolower(static_cast<unsigned char>(key_pressed))) {
             return index;
         }
         index++;

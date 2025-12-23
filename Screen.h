@@ -13,7 +13,8 @@
 #include "Bomb.h"
 #include <map>
 #include <vector>
-using std::vector;
+using namespace std;
+
 
 
 class Screen {
@@ -72,8 +73,8 @@ private:
 			"WWWWWWWWWWWWWWW K   WWW                                 WWWWWWWWWWWWWWWWWWWWWWWW", // 19
 			"WWWWWWWWWWWWWWW     WWWWWWWWWWWWWWW          @          WWWWWWWWWWWWWWWWWWWWWWWW", // 20
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWWWWWWWWWW", // 21
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 22
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 23
+			"WWWWWWLWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 22
+			"W                                                                              W", // 23
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
@@ -92,19 +93,20 @@ private:
 		"W                                                   WWWW                       W", // 9
 		"W         WW        WWWWWWWW                        WWWW                       W", // 10
 		"W         WW        WWWWWWWW                        WWWW                       W", // 11
-		"W         WW        WWWWWWWW                        WWWW                       W", // 12
-		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWW/WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 13
-		"W         WW        WWWWWWWW                        WWW              WWW      WW", // 14
-		"W         WW  WWWWWWWWWWWWW                         WWW              WWW      WW", // 15
-		"W         WWW/WWWWWWWWWWW                           WWW              W        WW", // 16
-		"W         WWWWWWWWWWWWWWW                           WWW              W        WW", // 17
-		"W                      WW                           /WW              W        /W", // 18
-		"W                      WW                           WWW              W        WW", // 19
-		"W             WWWW   WWWW                           WWW              W        WW", // 20
-		"W             W##  ** WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW        WW", // 21
-		"W             WWWWW    W   W   W   W   W   W   W   W   W   W   W   W          2W", // 22
-		"W             WWWWW      W   W   W   W   W   W   W   W   W   W   W   W        WW", // 23
+		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWW/WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 12
+		"W         WW        WWWWWWWW                        WWW              W        WW", // 13
+		"W         WWWWWWWWWWWWWWW                           WWW              W        WW", // 14
+		"W                      WW                           /WW              W        /W", // 15
+		"W                      WW                           WWW              W        WW", // 16
+		"W             WWWW   WWWW                    WWWWWWWWWW              W        WW", // 17
+		"W             W##  ** WWWWWWWWWWWWWWWWWWWWWWWWW/WWWWWWWWWWWWWWWWWWWWWW        WW", // 18
+		"W             WWWWW    W   W W   W   W   W   W              W  W    WW        2W", // 19
+		"W             WWWWW      W W W W W W W W W W WWWWWW   WWWWW W  W  W WW        WW", // 20
+		"WWWWWWWWWWWWWWWWWWW      W     W   W   W   W          WWWWW       W           WW", // 21
+		"WWWWWWLWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 22
+		"W                                                                              W", // 23
 		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
+
 	};
 
 	
@@ -123,18 +125,18 @@ private:
 			"W  WWWWWWWWW   W   W  WWWWWWW  WWWWWWWWWWWWWWW   WWWWWWW  WWWWWWW WWWWWWWWWW   W", // 10 
 			"W  W        W  W   W        W                 W     K          W        W      W", // 11 
 			"W  W   WWWWWW  WWWWW  WWWWWWW  WWWWWWWWWWWWW  WWWWWW   WWWWW   WWWWW   W   WWW W", // 12 
-			"W !W       W        W        W              W       W       W       W  W      WW", // 13 
+			"W !W       W        W        W    @         W       W       W       W  W      WW", // 13 
 			"W  WWWWW   W  WWWW  WWWWWW   WWWWWWWWWW     WWWWW   WWWWW   WWWWW   WWWWWWWW  WW", // 14 
 			"W      W  W      W        W          W         W        W        W          W  W", // 15 
 			"WWWWW  WWWWWWWW  W  WWWWWWW  WWWWWWWW  WWWWWWWW  WWWWW  WWWWWW  WWWWWWWW   WWWWW", // 16 
 			"W         W      W       W        W    @       W      W        W               W", // 17 
-			"W   WWWW  W  WWWWW  WWW  WWWWWWW  WWWWWWWWWW   WWWWW  WWWWWW  WWWWWWWW   WWWWW W", // 18 
-			"W      W     W          W                W    @      W         W      W      W W", // 19 
-			"WWWWW  WWWWWWW  WWWWWWWWW   WWWWWWWWWW   WWWWWWWWWWWWW  WWWWWWW WWWWWWWW  WWWW W", // 20 
-			"W         W             W           W                 W        W               W", // 21 
-			"W   WWW   W   WWWWWWW   WWWWWWW    W   WWWWWWWWWW     WWWWWWW  W   WWWWWWWWWW  W", // 22 
-			"W       W                 W        W           W              W             WW3W", // 23 
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW W"  // 24
+			"W   WWWW  W  WWWWW  WWW  WWWWWWW  WWWWWWWWWW   WWWWW  WWWWWW  WWWWWWWW   WWWWW W", // 18
+			"W         W             W           W                 W        W               W", // 19 
+			"W   WWW   W   WWWWWWW   WWWWWWW    W   WWWWWWWWWW     WWWWWWW  W   WWWWWWWWWW  W", // 20 
+			"W       W                 W        W           W              W             WW3W", // 21 
+			"WWWWWWLWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 22
+			"W                                                                              W", // 23
+			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
 
 
@@ -521,7 +523,7 @@ public:
 	bool isDoor(const Point& p) const;
 
 	bool isWall(const Point& p) const {
-		return getCharAtcurrentRoom(p) == 'W';
+		return getCharAtcurrentRoom(p) == 'W' || getCharAtcurrentRoom(p) == 'L';
 	}
 
 	int getVisiblePlayerCount() const;
@@ -541,10 +543,11 @@ public:
 		
 	// Check whether the provided switch requirements are satisfied in the current live items.
     // Each requirement is (group == room number, requiredState).
-	bool areSwitchRequirementsSatisfied(const std::vector<std::pair<int, bool>>& reqs) const;
+	bool areSwitchRequirementsSatisfied(const vector<pair<int, bool>>& reqs) const;
 
 	// Re-evaluate doors whose opening depends on switches. Called after switch toggles
 	// and after room wiring to auto-open SwitchesOnly doors that are already satisfied.
 	void evaluateDoorRequirements();
+	void printPlayersinfo()const;
 };
 

@@ -12,6 +12,7 @@ void Bomb::triggerBomb(Screen& screen, const Point& center) {
                 int x = center.getX() + dx;
                 int y = center.getY() + dy;
                 if (x >= 0 && x < Screen::MAX_X && y >= 0 && y < Screen::MAX_Y) {
+					if (y >= 21) continue; // prevent explosion affecting bottom info area
                     Point p(x, y);
                     // clear the template room representation
                     screen.changePixelInRoom(p, ' ');
