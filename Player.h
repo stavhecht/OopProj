@@ -19,6 +19,8 @@ class Player {
 	int launchRemaining = 0;
 	Direction launchDir = Direction::STAY;
 
+	int score = 0;
+
 public:
 	// ctor gets start point and an array of 5 keys
 	Player(const Point& point, const char(&the_keys)[NUM_KEYS + 1], Screen& room);
@@ -51,7 +53,7 @@ public:
 
 	int getLifes() const { return lifes; }
 	void resetLifes(int n = 3) { lifes = n; lastKnownlifes = n; }
-	void playerdead() { lifes--; }
+	void playerdead() { lifes--; score -= 100;}
 	bool hasDied();
 
 	Player& operator=(const Point& p){pos = p; return *this;}
@@ -60,6 +62,11 @@ public:
 	// Launch API used by springs and collisions
 	void applyLaunch(int speed, Direction dir, int duration);
 	int currentForce() const { return (launchRemaining > 0 && launchSpeed > 0) ? launchSpeed : 1; }
+
+	// Scoring API
+	int getScore() const { return score; }
+	void addScore(int delta) { score += delta; }
+	void resetScore() { score = 0; }
 
 private:
 	size_t findKeyIndex(char key_pressed) const;

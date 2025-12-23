@@ -214,6 +214,11 @@ void Screen::updateBombs() {
                 items.erase(items.begin() + i);
                 // trigger explosion effect at captured center
                 Bomb::triggerBomb(*this, center);
+                for (int pi = 0; pi < registeredPlayerCount; ++pi) {
+                    Player& p = registeredPlayers[pi];
+                    if (!p.isVisible()) continue;
+                    p.addScore(20);
+                }
                 continue;
             }
         }
@@ -224,6 +229,17 @@ void Screen::updateBombs() {
 void Screen::setScoreBoard() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], scoreBoard[i], MAX_X + 1);
+    }
+
+    // Render per-player scores starting at row 6 (fits inside board)
+    if (registeredPlayers && registeredPlayerCount > 0) {
+        const int startRow = 6;
+        const int maxRows = MAX_Y - startRow - 3; // leave some footer space
+        int rowsToShow = min(registeredPlayerCount, maxRows);
+        for (int i = 0; i < rowsToShow; ++i) {
+            string s = "Player " + to_string(i + 1) + " Score: " + to_string(registeredPlayers[i].getScore());
+            writeTextToBoard(startRow + i, 10, s);
+        }
     }
 }
 
@@ -258,11 +274,30 @@ void Screen::setWin() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], winBoard[i], MAX_X + 1);  
     }
+
+    // compute total score and write into the board near "Your Score:" (row 9)
+    if (registeredPlayers && registeredPlayerCount > 0) {
+        long long total = 0;
+        for (int i = 0; i < registeredPlayerCount; ++i) total += registeredPlayers[i].getScore();
+        string s = "Total Score: " + to_string(total);
+        int col = (MAX_X - static_cast<int>(s.size())) / 2;
+        if (col < 1) col = 1;
+        writeTextToBoard(9, col, s);
+    }
 }
 
 void Screen::setLose() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], loseBoard[i], MAX_X + 1);  
+    }
+
+    if (registeredPlayers && registeredPlayerCount > 0) {
+        long long total = 0;
+        for (int i = 0; i < registeredPlayerCount; ++i) total += registeredPlayers[i].getScore();
+        string s = "Total Score: " + to_string(total);
+        int col = (MAX_X - static_cast<int>(s.size())) / 2;
+        if (col < 1) col = 1;
+        writeTextToBoard(9, col, s);
     }
 }
 
@@ -382,6 +417,8 @@ void Screen::printRoom(Color defaultCol)const {
 }
 
 
+// Screen.cpp - modified printPlayersinfo to display each player's numeric score after hearts.
+// Replace the existing function body with this.
 void Screen::printPlayersinfo() const {
     Point dis = searchChar('L'); // legend top-left marker
     if (dis.getX() < 0 || dis.getY() < 0 || !registeredPlayers || registeredPlayerCount <= 0) return;
@@ -390,16 +427,15 @@ void Screen::printPlayersinfo() const {
     const int startY = dis.getY() + 1;
     if (startX < 0 || startX >= MAX_X || startY < 0 || startY >= MAX_Y) return;
 
-    const int gapSpaces = 20; // spaces between players
+    const int gapSpaces = 5; // spaces between players
     int curCol = startX;
 
-    for (int i = 0; i < registeredPlayerCount && curCol < MAX_X; i++) {
+    for (int i = 0; i < registeredPlayerCount && curCol < MAX_X; ++i) {
         const Player& p = registeredPlayers[i];
 
-        // ensure we position the console cursor before printing each player's block
+        // position cursor before each player's block to avoid drift
         gotoxy(curCol, startY);
 
-        // Build text pieces
         string prefix = "P" + to_string(i + 1) + " lives = ";
         string hearts = build_hearts(p.getLifes());
 
@@ -412,8 +448,9 @@ void Screen::printPlayersinfo() const {
             invColor = inv->getPos().getColor();
         }
 
-        // Create a single ASCII block to measure printed width (safe for ASCII output)
-        string block = prefix + hearts + " inv " + string(1, invCh);
+        // Build block for width accounting (ASCII-only)
+        string scoreStr = " score:" + to_string(p.getScore());
+        string block = prefix + hearts + " inv " + string(1, invCh) + scoreStr;
         int printed = static_cast<int>(block.size());
 
         // Print prefix + hearts in player's color
@@ -429,7 +466,12 @@ void Screen::printPlayersinfo() const {
         cout << invCh;
         reset_color();
 
-        // compute remaining space on the line and print gap spaces (do not overflow)
+        // print score (use white or another neutral color)
+        set_color(playerColor);
+        cout << scoreStr;
+        reset_color();
+
+        // compute remaining space and print gap spaces without overflowing
         int remainingCols = MAX_X - (curCol + printed);
         int spacesToPrint = 0;
         if (remainingCols > 0) {
@@ -437,11 +479,9 @@ void Screen::printPlayersinfo() const {
             for (int s = 0; s < spacesToPrint; ++s) cout << ' ';
         }
 
-        // advance curCol for the next player
         curCol += printed + spacesToPrint;
     }
 
-    // Ensure color reset and flush
     reset_color();
     cout.flush();
 }
@@ -816,3 +856,36 @@ void Screen::evaluateDoorRequirements() {
 		}
 	}
 }
+
+
+
+// Helper: safely overwrite a contiguous part of currentBoard[row] starting at col
+void Screen::writeTextToBoard(int row, int col, const string& text) {
+    if (row < 0 || row >= MAX_Y) return;
+    if (col < 0) return;
+    int maxWrite = min(static_cast<int>(text.size()), MAX_X - col);
+    if (maxWrite <= 0) return;
+    for (int i = 0; i < maxWrite; ++i) {
+        currentBoard[row][col + i] = text[i];
+    }
+}
+
+// Score helpers
+void Screen::addScoreToPlayer(int playerIndex, int delta) {
+    if (!registeredPlayers || playerIndex < 0 || playerIndex >= registeredPlayerCount) return;
+    registeredPlayers[playerIndex].addScore(delta);
+}
+
+int Screen::getPlayerScore(int playerIndex) const {
+    if (!registeredPlayers || playerIndex < 0 || playerIndex >= registeredPlayerCount) return 0;
+    return registeredPlayers[playerIndex].getScore();
+}
+
+void Screen::resetAllScores() {
+    if (!registeredPlayers) return;
+    for (int i = 0; i < registeredPlayerCount; ++i) {
+        registeredPlayers[i].resetScore();
+    }
+}
+
+// update setScoreBoard to include per-player scores

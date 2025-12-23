@@ -190,7 +190,7 @@ void Player::pickUp() {
         // restore cells previously lit by the torch on ground and paint around player
         t->paintLightDiff(screen, itemPos, pos);
     }
-
+    addScore(10);
     // remove from room (getItem already removed, this is defensive)
     screen.changePixelInRoom(itemPos, ' ');
 
@@ -220,7 +220,7 @@ CollectableItems* Player::dispose() {
 
     // item reaction
     inventory->onDrop(*this, screen);
-
+    addScore(10);
     // If it's a bomb, arm it and transfer ownership to the screen
     Bomb* bomb = dynamic_cast<Bomb*>(inventory);
     if (bomb) {
@@ -343,12 +343,13 @@ void Player::move() {
                         Player* reg2 = screen.getRegisteredPlayers();
                         int regCount2 = screen.getRegisteredPlayerCount();
                         if (reg2 && regCount2 > 0) {
-                            for (int i = 0; i < regCount2; ++i) {
+                            for (int i = 0; i < regCount2; i++) {
                                 Player& other = reg2[i];
                                 if (&other == this) continue;
                                 if (!other.isVisible()) continue;
                                 if (other.getPos() == pos) {
                                     other.applyLaunch(launchSpeed, launchDir, launchSpeed * launchSpeed);
+									other.addScore(5);
                                 }
                             }
                         }

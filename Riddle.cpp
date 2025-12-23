@@ -17,6 +17,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 		std::cout << answer << std::flush;
 		
 		if (answer == '4') { // correct answer
+			player.addScore(50);
 			sleep_ms(500);
 			answered = true;
 			Point p = pos;
@@ -31,6 +32,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 			return;
 		}
 		else {
+			player.addScore(-20);
 			gotoxy(posX, posY);
 			std::cout << static_cast<char>(answer) << std::flush;
 

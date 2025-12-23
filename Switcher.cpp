@@ -2,10 +2,12 @@
 
 void Switcher::onStep(Player& player, Screen& screen) {
     if (onOff) {  // on -> off
+		player.addScore(-3); // penalty for turning switch off
         onOff = false;
         pos.setCh('/');
         pos.setColor(Color::Red);
     } else {      // off -> on
+		player.addScore(7); // reward for turning switch on
         onOff = true;
         pos.setCh('\\');
         pos.setColor(Color::LightGreen);

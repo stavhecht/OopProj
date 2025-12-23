@@ -49,6 +49,9 @@ private:
 	void populateLiveItemsFromRoom(int nRoom);   // <-- updated: accept room number
 	void applyRoomDefaultColors(int nRoom);
 
+	// helper to write ASCII text into the mutable currentBoard safely
+	void writeTextToBoard(int row, int col, const std::string& text);
+
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
 			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
@@ -463,7 +466,10 @@ public:
 	void setRiddle();
 	void setRoom(int nRoom);
 	
-	
+	// Score helpers
+	void addScoreToPlayer(int playerIndex, int delta);
+	int getPlayerScore(int playerIndex) const;
+	void resetAllScores();
 
 	void printBoard(Color col = Color::LightYellow) const;
 	void printRoom(Color col = Color::Gray) const;

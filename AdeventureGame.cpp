@@ -186,6 +186,7 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
         // if the player moved onto a previously-opened door tile, mark them moved and hide
         if (screen.isDoorOpenedAt(playerPos)) {
             p.setVisible(false);
+			p.addScore(100);
             p.setPos(Point(-1, -1)); // move off-screen
 
             if (i >= static_cast<int>(playersMoved.size()))
@@ -194,7 +195,12 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
 
             // Advance room when there are no visible players left.
             if (screen.getVisiblePlayerCount() == 0) {
-                ++currentRoom;
+                currentRoom++;
+                for (int i = 0; i < playerCount; ++i) {
+                    Player& p = players[i];
+                    if (!p.isVisible()) continue;
+                    p.addScore(100); // bonus for completing room
+                }
                 changeRoom = true;
                 break; // all remaining players moved to next room / none remain
             }
@@ -311,7 +317,7 @@ void AdeventureGame::startNewGame()
     bool changeRoom = true;
     int currentRoom = 1;
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
-    std::vector<bool> playersMoved(playerCount, false);
+    vector<bool> playersMoved(playerCount, false);
 
     screen.registerPlayers(players, playerCount);
 
@@ -320,7 +326,7 @@ void AdeventureGame::startNewGame()
 
         // Detect which players lost a life this tick (consume the event via hasDied())
         vector<int> diedIndices;
-        for (int i = 0; i < playerCount; ++i) {
+        for (int i = 0; i < playerCount; i++) {
             if (players[i].hasDied()) {
                 diedIndices.push_back(i);
             }
@@ -429,6 +435,7 @@ void AdeventureGame::run() {
                 CollectableItems* inv = p.takeInventory();
                 if (inv) delete inv;
                 p.resetLifes();            // reset life counters
+				p.resetScore();           // reset score
                 p.setVisible(false);      // will be positioned/shown by loadRoom
                 p.setPos(Point(-1, -1));  // keep off-screen until loadRoom runs
             }
