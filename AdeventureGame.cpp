@@ -1,6 +1,8 @@
 #include "AdeventureGame.h"
 #include "Console.h"
+#include <fstream>
 #include <vector>
+#include <string>
 
 
 
@@ -31,11 +33,36 @@ AdeventureGame::AdeventureGame()
                Player(Point(15, 5, 0, 1, '&', Color::Blue), "ilmjko", screen) }
 {}
 
+
+bool AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
+	mapData.clear();
+	const int ROOM_COUNT = 3;
+	mapData.resize(ROOM_COUNT); // assuming 3 rooms
+    for (int i = 0; i < 3; i++) {
+		string filename = "adv-world_0" + to_string(i + 1) + ".screen.txt";
+        fstream file(filename);
+
+        if (!file.is_open()) {
+            return false;
+        }
+
+        string line;
+        while (getline(file, line)) {
+            mapData[i].push_back(line);
+        }
+
+        file.close();
+    }
+    return true;
+}
+
 void AdeventureGame::init()
 {
     init_console();
     clrscr();
     hideCursor();
+	loadFiles(screen.getGameRoomsData());
+
 }
 
 bool AdeventureGame::waitForMenuSelection(bool& exitApp)
@@ -420,6 +447,7 @@ void AdeventureGame::startNewGame()
 }
 
 void AdeventureGame::run() {
+    init();
     bool exitApp = false;
 
     while (!exitApp) {

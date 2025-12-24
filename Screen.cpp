@@ -531,27 +531,36 @@ Point Screen::searchChar(char c) const {
 }
 
 void Screen::setRoom(int nRoom) {
+    currentRoomIndex = nRoom - 1;
+    if (nRoom >= 1 && nRoom <= static_cast<int>(gameRoomsData.size())
+        && !gameRoomsData[currentRoomIndex].empty()) {
+        // copy lines into currentRoom (pad or truncate to MAX_X)
+        const vector<string>& tmpl = gameRoomsData[currentRoomIndex];
+        for (int r = 0; r < MAX_Y; ++r) {
+            string line;
+            if (r < static_cast<int>(tmpl.size()))
+                line = tmpl[r];
+            else
+                line.clear();
+
+            // ensure exact width MAX_X, null-terminated
+            if (static_cast<int>(line.size()) < MAX_X)
+                line.append(MAX_X - static_cast<int>(line.size()), ' ');
+            else if (static_cast<int>(line.size()) > MAX_X)
+                line.resize(MAX_X);
+
+            // copy into char array with null terminator
+            for (int c = 0; c < MAX_X; ++c)
+                currentRoom[r][c] = line[c];
+            currentRoom[r][MAX_X] = '\0';
+        }
+    }
     // clear opened doors for the new room
     clearOpenedDoors();
     currentRoomIndex = nRoom - 1;
 
     // Delete any existing live items before loading a new room
     clearAndDeleteItems();
-
-    switch (currentRoomIndex)
-    {
-    case 0:
-        copyTemplateToCurrentRoom(gameRoom1);
-        break;
-    case 1:
-        copyTemplateToCurrentRoom(gameRoom2);
-        break;
-    case 2:
-        copyTemplateToCurrentRoom(gameRoom3);
-        break;
-    default:
-        break;
-    }
 
     applyRoomDefaultColors(currentRoomIndex);
 

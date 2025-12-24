@@ -29,6 +29,7 @@ private:
 	Player* registeredPlayers = nullptr;
 	int registeredPlayerCount = 0;
 	int currentRoomIndex = 0;
+	vector<vector<string>> gameRoomsData;
 
 	// Per-cell color buffer (keeps illumination persistent across redraws & pauses)
 	Color cellColor[MAX_Y][MAX_X];
@@ -50,7 +51,7 @@ private:
 	void applyRoomDefaultColors(int nRoom);
 
 	// helper to write ASCII text into the mutable currentBoard safely
-	void writeTextToBoard(int row, int col, const std::string& text);
+	void writeTextToBoard(int row, int col, const string& text);
 
 	const char* gameRoom1[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -96,7 +97,7 @@ private:
 		"W                                                   WWWW                       W", // 9
 		"W         WW        WWWWWWWW                        WWWW                       W", // 10
 		"W         WW        WWWWWWWW                        WWWW                       W", // 11
-		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWW/WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 12
+		"W         WW        /WWWWWWWWWWWWWWWWWWWWWWWWWW/WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 12
 		"W         WW        WWWWWWWW                        WWW              W        WW", // 13
 		"W         WWWWWWWWWWWWWWW                           WWW              W        WW", // 14
 		"W                      WW                           /WW              W        /W", // 15
@@ -555,5 +556,10 @@ public:
 	// and after room wiring to auto-open SwitchesOnly doors that are already satisfied.
 	void evaluateDoorRequirements();
 	void printPlayersinfo()const;
+
+	// Allow external code to read / fill the per-room raw text data.
+	// Non-const overload intentionally returns a reference so callers can push_back lines.
+	vector<vector<string>>& getGameRoomsData() { return gameRoomsData; }
+	const vector<vector<string>>& getGameRoomsData() const { return gameRoomsData; }
 };
 
