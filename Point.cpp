@@ -61,7 +61,7 @@ Point& Point::operator=(const Item& item) {
     return *this;
 }
 
-std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
+pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
 	// Search a square of side (2*radius+1) around this point, skipping own tile.
 	// Return position of first CollectableItems found.
 	for (int dy = -radius; dy <= radius; ++dy) {
@@ -83,19 +83,19 @@ std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
             // Only consider collectable items for this query
             CollectableItems* ci = dynamic_cast<CollectableItems*>(it);
             if (ci) {
-                return std::make_pair(true, targetPoint);
+                return make_pair(true, targetPoint);
             }
 		}
 	}
-	return std::make_pair(false, Point(-1, -1));
+	return make_pair(false, Point(-1, -1));
 }
 
-std::pair<bool, Point> Point::SteppedOnAdjacent(Screen& screen) const {
+pair<bool, Point> Point::SteppedOnAdjacent(Screen& screen) const {
     // Check four orthogonal neighbours (no diagonals) for SteppedOnItems.
     const int dx[4] = { 0, 1, 0, -1 };
     const int dy[4] = { -1, 0, 1, 0 };
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 4; i++) {
         int nx = x + dx[i];
         int ny = y + dy[i];
 
@@ -109,16 +109,16 @@ std::pair<bool, Point> Point::SteppedOnAdjacent(Screen& screen) const {
 
         SteppedOnItems* si = dynamic_cast<SteppedOnItems*>(it);
         if (si) {
-            return std::make_pair(true, target);
+            return make_pair(true, target);
         }
     }
 
-    return std::make_pair(false, Point(-1, -1));
+    return make_pair(false, Point(-1, -1));
 }
 
-std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
-	for (int dy = -radius; dy <= radius; ++dy) {
-		for (int dx = -radius; dx <= radius; ++dx) {
+pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
+	for (int dy = -radius; dy <= radius; dy++) {
+		for (int dx = -radius; dx <= radius; dx++) {
 			if(dx == 0 && dy == 0)
 				continue; // skip own position
 			int newX = x + dx;
@@ -130,10 +130,10 @@ std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
 
 			Point targetPoint(newX, newY);
 			if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
-				return std::make_pair(true, targetPoint);
+				return make_pair(true, targetPoint);
 			}
 		}
 	}
-	return std::make_pair(false, Point(-1, -1));
+	return make_pair(false, Point(-1, -1));
 }
 

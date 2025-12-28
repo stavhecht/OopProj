@@ -20,10 +20,10 @@ private:
     void processSteppedOnInteractions(bool &changeRoom);
     void handleInput(bool &running, bool &changeRoom);
     static Point GetStartPosForRoom(int room, int playerIndex);
-    bool loadFiles(vector<vector<string>>& mapData);
+    pair<bool, int>loadFiles(vector<vector<string>>& mapData);
 
 public:
     AdeventureGame();
-    void init();
+    bool init();
     void run();
 };

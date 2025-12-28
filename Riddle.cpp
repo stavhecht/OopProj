@@ -14,7 +14,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 		gotoxy(posX, posY);
 		set_color(Color::LightYellow);
 		char answer = get_single_char();
-		std::cout << answer << std::flush;
+		cout << answer << flush;
 		
 		if (answer == '4') { // correct answer
 			player.addScore(50);
@@ -34,7 +34,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 		else {
 			player.addScore(-20);
 			gotoxy(posX, posY);
-			std::cout << static_cast<char>(answer) << std::flush;
+			cout << static_cast<char>(answer) << flush;
 
 			// provide brief feedback for wrong answer, then clear it so user can retry
 			gotoxy(posX, posY);
@@ -44,7 +44,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 
 			// erase typed char and feedback
 			gotoxy(posX, posY);
-			std::cout << ' ' << std::flush;
+			cout << ' ' << flush;
 			
 		}
 	}

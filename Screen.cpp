@@ -261,6 +261,13 @@ void Screen::setGamePaused() {
     }
 }
 
+void Screen::setErrorBoard(int nRoom) {
+    for (int i = 0; i < MAX_Y; i++) {
+        memcpy(currentBoard[i], screenErrorBoard[i], MAX_X + 1);
+    }
+	currentBoard[7][37] = '0' + nRoom; // write room number into the board
+}
+
 
 
 void Screen::setGuide() {

@@ -18,7 +18,7 @@ public:
 private:
     OpenMode openMode = OpenMode::KeyOnly; // default preserve existing behavior
     // Each pair is (groupId == room number, requiredState)
-    std::vector<std::pair<int, bool>> switchRequirements;
+    vector<pair<int, bool>> switchRequirements;
 
 public:
     Door(const Point& p, char c, Color col = Color::White)
@@ -34,8 +34,8 @@ public:
     void setOpenMode(OpenMode m) { openMode = m; }
     OpenMode getOpenMode() const { return openMode; }
 
-    void setSwitchRequirements(const std::vector<std::pair<int, bool>>& reqs) { switchRequirements = reqs; }
-    const std::vector<std::pair<int, bool>>& getSwitchRequirements() const { return switchRequirements; }
+    void setSwitchRequirements(const vector<pair<int, bool>>& reqs) { switchRequirements = reqs; }
+    const vector<pair<int, bool>>& getSwitchRequirements() const { return switchRequirements; }
 
     void onStep(Player& player, Screen& screen) override;
 

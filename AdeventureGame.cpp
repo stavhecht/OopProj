@@ -34,16 +34,18 @@ AdeventureGame::AdeventureGame()
 {}
 
 
-bool AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
-	mapData.clear();
-	const int ROOM_COUNT = 3;
-	mapData.resize(ROOM_COUNT); // assuming 3 rooms
-    for (int i = 0; i < 3; i++) {
-		string filename = "adv-world_0" + to_string(i + 1) + ".screen.txt";
+pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
+    mapData.clear();
+    const int ROOM_COUNT = 3;
+    mapData.resize(ROOM_COUNT); // assuming 3 rooms
+
+    bool anyLoaded = true;
+    for (int i = 0; i < ROOM_COUNT; i++) {
+        string filename = "adv-world_0" + to_string(i + 1) + ".screen.txt";
         fstream file(filename);
 
         if (!file.is_open()) {
-            return false;
+            return make_pair(false, i+1);
         }
 
         string line;
@@ -53,15 +55,33 @@ bool AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
 
         file.close();
     }
-    return true;
+
+    // If none of the files could be used, signal failure
+    return make_pair(true, 0);
 }
 
-void AdeventureGame::init()
+bool AdeventureGame::init()
 {
     init_console();
     clrscr();
     hideCursor();
-	loadFiles(screen.getGameRoomsData());
+	auto isLoaded = loadFiles(screen.getGameRoomsData());
+    // Try to load as many files as possible; if none usable, let caller decide to exit
+    if (!isLoaded.first) {
+        screen.setErrorBoard(isLoaded.second);
+        screen.printBoard();
+        while (true){
+            if (check_kbhit()) {
+                char c = static_cast<char>(get_single_char());
+                if (c == ESC) {
+                    break;
+                }
+            }
+        }
+		
+		return true;
+    }
+	return false;
 
 }
 
@@ -504,8 +524,7 @@ void AdeventureGame::startNewGame()
 }
 
 void AdeventureGame::run() {
-    init();
-    bool exitApp = false;
+    bool exitApp = init();
 
     while (!exitApp) {
         bool startGame = waitForMenuSelection(exitApp);

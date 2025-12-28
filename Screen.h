@@ -117,12 +117,12 @@ private:
 		 "W                                                                              W", // 4
 		 "W                                                                              W", // 5
 		 "W                                                                              W", // 6
-		 "W                            Screen #  is not good                             W", // 7
+		 "W                            Screen #  is not loaded                           W", // 7
 		 "W                                                                              W", // 9
 		 "W                                                                              W", // 9
 		 "W                                                                              W", // 10
 		 "W                                                                              W", // 11
-		 "W                      Press ENTER to go to the next stage                     W", // 12
+		 "W                               Press ESC to exit                              W", // 12
 		 "W                                                                              W", // 13
 		 "W                                                                              W", // 14
 		 "W                                                                              W", // 15
@@ -196,34 +196,6 @@ private:
 	};
 
 
-	/*const char* endLoadBoard[MAX_Y] = {
-		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-		 "Q==============================================================================Q", // 1
-		 "Q                                                                              Q", // 2
-		 "Q                                                                              Q", // 3
-		 "Q                                                                              Q", // 4
-		 "Q                                                                              Q", // 5
-		 "Q                    ||    ALL FILES HAVE BEEN LOADED    ||                    Q", // 6
-		 "Q                                                                              Q", // 7
-		 "Q                                                                              Q", // 9
-		 "Q                                                                              Q", // 9
-		 "Q                                                                              Q", // 10
-		 "Q                                                                              Q", // 11
-		 "Q                                                                              Q", // 12
-		 "Q                                                                              Q", // 13
-		 "Q                                                                              Q", // 14
-		 "Q                                                                              Q", // 15
-		 "Q                                                                              Q", // 16
-		 "Q                                                                              Q", // 17
-		 "Q                                                                              Q", // 18
-		 "Q                                                                              Q", // 19
-		 "Q                                                                              Q", // 20
-		 "Q                                                                              Q", // 21
-		 "Q                                                                              Q", // 22
-		 "Q==============================================================================Q", // 23
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
-	};*/
 
 	const char* manuBoard[MAX_Y] = {
 		// 01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -281,34 +253,7 @@ private:
 		  "W                          Good luck and have fun!                             W", // 23
 		  "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
-	/*const char* noFilesErrorBoard[MAX_Y] = {
-		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-		 "Q==============================================================================Q", // 1
-		 "Q                                                                              Q", // 2
-		 "Q                                                                              Q", // 3
-		 "Q                                                                              Q", // 4
-		 "Q                                                                              Q", // 5
-		 "Q                                                                              Q", // 6
-		 "Q                      ||    Screen File is empty    ||                        Q", // 7
-		 "Q                                                                              Q", // 9
-		 "Q                         Add files in order to play                           Q", // 9
-		 "Q                                                                              Q", // 10
-		 "Q                                                                              Q", // 11
-		 "Q                                                                              Q", // 12
-		 "Q                                                                              Q", // 13
-		 "Q                                                                              Q", // 14
-		 "Q                                                                              Q", // 15
-		 "Q                                                                              Q", // 16
-		 "Q                                                                              Q", // 17
-		 "Q                        Press ESC to return to the Menu                       Q", // 18
-		 "Q                                                                              Q", // 19
-		 "Q                                                                              Q", // 20
-		 "Q                                                                              Q", // 21
-		 "Q                                                                              Q", // 22
-		 "Q==============================================================================Q", // 23
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
-	};*/
+	
 
 	const char* gamePaused[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -375,6 +320,7 @@ public:
 	void setGamePaused();
 	void setRiddle();
 	void setRoom(int nRoom);
+	void setErrorBoard(int nRoom);
 	
 	// Score helpers
 	void addScoreToPlayer(int playerIndex, int delta);
