@@ -267,10 +267,10 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
             // Advance room when there are no visible players left.
             if (screen.getVisiblePlayerCount() == 0) {
                 currentRoom++;
-                for (int j = 0; j < playerCount; ++j) {
-                    Player& pp = players[j];
-                    if (!pp.isVisible()) continue;
-                    pp.addScore(100); // bonus for completing room
+                for (int j = 0; j < playerCount; j++) {
+                    Player& p = players[j];
+                    if (!p.isVisible()) continue;
+                    p.addScore(100); // bonus for completing room
                 }
                 changeRoom = true;
                 break; // all remaining players moved to next room / none remain
@@ -284,14 +284,23 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
     const int dx[4] = { 0, 1, 0, -1 };
     const int dy[4] = { -1, 0, 1, 0 };
 
-    for (auto& p : players) {
+    const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
+
+    // persistent previous-adjacency per player so we only trigger onStep when adjacency changes
+    static vector<vector<Point>> prevAdjacent;
+    if (static_cast<int>(prevAdjacent.size()) != playerCount) {
+        prevAdjacent.assign(playerCount, vector<Point>());
+    }
+
+    for (int pi = 0; pi < playerCount; pi++) {
+        Player& p = players[pi];
         if (!p.isVisible())
             continue;
 
+        // build current adjacency list (unique positions)
+        vector<Point> curAdj;
         Point playerPos = p.getPos();
-
-        // Check all 4 orthogonal neighbours and process each SteppedOnItems found.
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; i++) {
             int nx = playerPos.getX() + dx[i];
             int ny = playerPos.getY() + dy[i];
 
@@ -300,34 +309,38 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
 
             Point target(nx, ny);
             Item* adjItem = screen.peekItemAt(target);
-            if (!adjItem)
-                continue;
+            if (!adjItem) continue;
 
             SteppedOnItems* sItemAdj = dynamic_cast<SteppedOnItems*>(adjItem);
-            if (!sItemAdj)
-                continue;
+            if (!sItemAdj) continue;
 
-            // Handle specific stepped-on item types.
-            if (Door* door = dynamic_cast<Door*>(sItemAdj)) {
-                door->onStep(p, screen);
-                continue;
+            // avoid duplicates
+            bool seen = false;
+            for (const Point& pp : curAdj) {
+                if (pp == target) { seen = true; break; }
             }
+            if (!seen) curAdj.push_back(target);
+        }
 
-            if (Riddle* riddle = dynamic_cast<Riddle*>(sItemAdj)) {
-                riddle->onStep(p, screen);
-                continue;
+        // For each currently adjacent item that was NOT adjacent in previous tick -> trigger onStep
+        for (const Point& pos : curAdj) {
+            bool wasAdjacent = false;
+            for (const Point& prevPos : prevAdjacent[pi]) {
+                if (prevPos == pos) { wasAdjacent = true; break; }
             }
+            if (!wasAdjacent) {
+                Item* adjItem = screen.peekItemAt(pos);
+                if (!adjItem) continue;
+                SteppedOnItems* sItemAdj = dynamic_cast<SteppedOnItems*>(adjItem);
+                if (!sItemAdj) continue;
 
-            if (Switcher* switcher = dynamic_cast<Switcher*>(sItemAdj)) {
-                switcher->onStep(p, screen);
-                continue;
-            }
-
-            if (Spring* spring = dynamic_cast<Spring*>(sItemAdj)) {
-                spring->onStep(p, screen);
-                continue;
+                // Only trigger when adjacency has just appeared (player moved next to it)
+                sItemAdj->onStep(p, screen);
             }
         }
+
+        // Update prevAdjacent for this player
+        prevAdjacent[pi].swap(curAdj);
     }
 }
 

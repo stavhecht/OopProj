@@ -890,9 +890,6 @@ void Screen::evaluateDoorRequirements() {
 
 			Point dp = door->getPos();
 			markDoorOpened(dp);
-			//changePixelInRoom(dp, ' ');
-			//removeItemAt(dp);
-			//printRoom();
 		}
 	}
 }
