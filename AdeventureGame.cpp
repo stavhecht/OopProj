@@ -207,13 +207,57 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
         if (!p.isVisible())
             continue;
 
+        // --- EARLY CHECK: if the player's next intended cell is an opened door -> treat as moving to next room.
+        Point nextBeforeMove = p.getPos();
+        nextBeforeMove.move(); // compute the next cell without calling private Player helpers
+        bool nextIsOpenedDoor = false;
+
+        // check live item door first
+        Item* itNext = screen.peekItemAt(nextBeforeMove);
+        if (itNext) {
+            Door* dNext = dynamic_cast<Door*>(itNext);
+            if (dNext && dNext->isOpen()) nextIsOpenedDoor = true;
+        }
+
+        // fallback: consider persisted opened doors (in case door item was removed)
+        if (!nextIsOpenedDoor && screen.isDoorOpenedAt(nextBeforeMove)) {
+            nextIsOpenedDoor = true;
+        }
+
+        if (nextIsOpenedDoor) {
+            // mark player as moved to next room (hide & off-screen), preserve existing scoring behaviour
+            p.setVisible(false);
+            p.addScore(100);
+            p.setPos(Point(-1, -1));
+
+            if (i >= static_cast<int>(playersMoved.size()))
+                playersMoved.resize(playerCount, false);
+            playersMoved[i] = true;
+
+            // Advance room when there are no visible players left.
+            if (screen.getVisiblePlayerCount() == 0) {
+                currentRoom++;
+                for (int j = 0; j < playerCount; ++j) {
+                    Player& pp = players[j];
+                    if (!pp.isVisible()) continue;
+                    pp.addScore(100); // bonus for completing room
+                }
+                changeRoom = true;
+                break; // all remaining players moved to next room / none remain
+            }
+
+            // skip performing the normal move() for this player (we already handled transition)
+            continue;
+        }
+
+        // If not an early transition, perform normal movement and then handle stepping onto opened door.
         p.move();
 
         Point playerPos = p.getPos();
         // if the player moved onto a previously-opened door tile, mark them moved and hide
         if (screen.isDoorOpenedAt(playerPos)) {
             p.setVisible(false);
-			p.addScore(100);
+            p.addScore(100);
             p.setPos(Point(-1, -1)); // move off-screen
 
             if (i >= static_cast<int>(playersMoved.size()))
@@ -223,10 +267,10 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
             // Advance room when there are no visible players left.
             if (screen.getVisiblePlayerCount() == 0) {
                 currentRoom++;
-                for (int i = 0; i < playerCount; ++i) {
-                    Player& p = players[i];
-                    if (!p.isVisible()) continue;
-                    p.addScore(100); // bonus for completing room
+                for (int j = 0; j < playerCount; ++j) {
+                    Player& pp = players[j];
+                    if (!pp.isVisible()) continue;
+                    pp.addScore(100); // bonus for completing room
                 }
                 changeRoom = true;
                 break; // all remaining players moved to next room / none remain

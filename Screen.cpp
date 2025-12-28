@@ -317,6 +317,11 @@ void Screen::gobacktoMenu() {
 
 // Copy ctor for Screen — performs deep copy of mutable buffers and pointer copy
 Screen::Screen(const Screen& other) {
+    // copy basic scalars / pointers
+    registeredPlayers = other.registeredPlayers;
+    registeredPlayerCount = other.registeredPlayerCount;
+    currentRoomIndex = other.currentRoomIndex;
+
     // copy mutable character buffers
     for (int i = 0; i < MAX_Y; ++i) {
         memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
@@ -325,10 +330,6 @@ Screen::Screen(const Screen& other) {
 
     // copy the pointer-based template boards (string literals) — shallow copy of pointers is correct
     for (int i = 0; i < MAX_Y; ++i) {
-        gameRoom1[i] = other.gameRoom1[i];
-        gameRoom2[i] = other.gameRoom2[i];
-        gameRoom3[i] = other.gameRoom3[i];
-
         winBoard[i] = other.winBoard[i];
         scoreBoard[i] = other.scoreBoard[i];
         screenErrorBoard[i] = other.screenErrorBoard[i];
@@ -337,6 +338,18 @@ Screen::Screen(const Screen& other) {
         manuBoard[i] = other.manuBoard[i];
         guideBoard[i] = other.guideBoard[i];
         gamePaused[i] = other.gamePaused[i];
+    }
+
+    // copy game room source data (text files -> vector<string>)
+    gameRoomsData = other.gameRoomsData;
+
+    // copy opened doors registry
+    openedDoors = other.openedDoors;
+
+    // copy per-room defaults arrays
+    for (int i = 0; i < ROOM_COUNT; ++i) {
+        roomDefaultColor[i] = other.roomDefaultColor[i];
+        roomUseColor[i] = other.roomUseColor[i];
     }
 
     // deep-copy items
@@ -700,20 +713,25 @@ int Screen::getVisiblePlayerCount() const {
 
 
 
-bool Screen::removeItemAt(const Point & p) {
-    for (auto it = items.begin(); it != items.end(); it++) {
-        Item * item = *it;
+bool Screen::removeItemAt(const Point& p) {
+    for (auto it = items.begin(); it != items.end(); ++it) {
+        Item* item = *it;
         if (!item) continue;
         Point ip = item->getPos();
         if (ip.getX() == p.getX() && ip.getY() == p.getY()) {
+            // Protect Doors that have been opened: do not remove them accidentally.
+            Door* maybeDoor = dynamic_cast<Door*>(item);
+            if (maybeDoor && maybeDoor->isOpen()) {
+                // keep opened door in the items vector so it stays visible
+                return false;
+            }
+
             delete item;
             items.erase(it);
             return true;
-            
         }
-        
     }
-     return false;
+    return false;
 }
 
 
@@ -756,6 +774,11 @@ Screen& Screen::operator=(Screen const& other) {
     // delete existing items owned by this
     clearAndDeleteItems();
 
+    // copy basic scalars / pointers
+    registeredPlayers = other.registeredPlayers;
+    registeredPlayerCount = other.registeredPlayerCount;
+    currentRoomIndex = other.currentRoomIndex;
+
     // copy mutable boards (char buffers)
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], other.currentBoard[i], MAX_X + 1);
@@ -764,10 +787,6 @@ Screen& Screen::operator=(Screen const& other) {
 
     // copy pointer-based board templates
     for (int i = 0; i < MAX_Y; i++) {
-        gameRoom1[i] = other.gameRoom1[i];
-        gameRoom2[i] = other.gameRoom2[i];
-        gameRoom3[i] = other.gameRoom3[i];
-
         winBoard[i] = other.winBoard[i];
         scoreBoard[i] = other.scoreBoard[i];
         screenErrorBoard[i] = other.screenErrorBoard[i];
@@ -776,6 +795,18 @@ Screen& Screen::operator=(Screen const& other) {
         manuBoard[i] = other.manuBoard[i];
         guideBoard[i] = other.guideBoard[i];
         gamePaused[i] = other.gamePaused[i];
+    }
+
+    // copy game room source data
+    gameRoomsData = other.gameRoomsData;
+
+    // copy opened doors registry
+    openedDoors = other.openedDoors;
+
+    // copy per-room defaults arrays
+    for (int i = 0; i < ROOM_COUNT; ++i) {
+        roomDefaultColor[i] = other.roomDefaultColor[i];
+        roomUseColor[i] = other.roomUseColor[i];
     }
 
     // deep copy items
@@ -859,9 +890,9 @@ void Screen::evaluateDoorRequirements() {
 
 			Point dp = door->getPos();
 			markDoorOpened(dp);
-			changePixelInRoom(dp, ' ');
-			removeItemAt(dp);
-			printRoom();
+			//changePixelInRoom(dp, ' ');
+			//removeItemAt(dp);
+			//printRoom();
 		}
 	}
 }

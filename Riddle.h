@@ -2,10 +2,14 @@
 #include "SteppedOnItems.h"
 #include "Player.h"
 #include "Screen.h"
+#include <string>
+
 
 
 class Riddle: public SteppedOnItems{
 	bool answered = false;
+	string q = " ";
+	string a = " ";
 
 	public:
 	Riddle(const Point& p, char c = '?', Color col = Color::LightAqua) : SteppedOnItems(p, c, col) {}

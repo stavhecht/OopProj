@@ -1,8 +1,9 @@
-#include "Player.h"
+ï»¿#include "Player.h"
 #include "Bomb.h"
 #include "Torch.h"
 #include "Obstacle.h"
 #include "Spring.h"
+#include "Door.h"         // added to allow checking opened doors
 #include <cctype>
 #include <vector>
 #include <functional>
@@ -305,7 +306,11 @@ void Player::move() {
             }
 
             // If next contains a non-obstacle item -> stop launch (but attempt transfer to player collision)
-            if (screen.isItem(next) && !dynamic_cast<Obstacle*>(screen.peekItemAt(next))) {
+            Item* itNext = screen.peekItemAt(next);
+            Obstacle* obsNext = dynamic_cast<Obstacle*>(itNext);
+            Door* doorNext = dynamic_cast<Door*>(itNext);
+            // allow passing through opened doors (treat as empty)
+            if (itNext && !obsNext && !(doorNext && doorNext->isOpen())) {
                 // transfer launch if collided with other player
                 Player* reg = screen.getRegisteredPlayers();
                 int regCount = screen.getRegisteredPlayerCount();
@@ -373,7 +378,7 @@ void Player::move() {
                 return;
             }
 
-            // allowed: move one step (no obstacle)
+            // allowed: move one step (no obstacle) -- includes opened door (treated as empty)
             updateTorchOnMove(next);
             pos.draw(' ');
             pos = next;
@@ -407,7 +412,7 @@ void Player::move() {
     Point next = pos;
     next.move();
 
-    // If player is not attempting to move (STAY), just redraw and exit — do NOT push obstacles.
+    // If player is not attempting to move (STAY), just redraw and exit ï¿½ do NOT push obstacles.
     if (next == pos) {
         pos.draw();
         return;
@@ -422,8 +427,9 @@ void Player::move() {
     // If next contains an item, only allow push when it's an Obstacle and the combined force suffices.
     Item* it = screen.peekItemAt(next);
     Obstacle* obs = dynamic_cast<Obstacle*>(it);
-    if (it && !obs) {
-        // some other item (door, collectable, etc.) blocks movement here; keep position
+    Door* door = dynamic_cast<Door*>(it);
+    if (it && !obs && !(door && door->isOpen())) {
+        // some other item (closed door, collectable, etc.) blocks movement here; keep position
         pos.draw();
         return;
     }
@@ -452,7 +458,7 @@ void Player::move() {
         return;
     }
 
-    // Empty cell -> move normally
+    // Empty cell or opened door -> move normally
     updateTorchOnMove(next);
     pos.draw(' ');
     pos = next;

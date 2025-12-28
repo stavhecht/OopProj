@@ -53,9 +53,6 @@ void Door::onStep(Player& player, Screen& screen) {
     if (opened) {
         // persist change to screen and visuals
         screen.markDoorOpened(pos);
-        screen.changePixelInRoom(pos, ' ');
-        screen.removeItemAt(pos);
-        screen.printRoom();
     }
 }
 
