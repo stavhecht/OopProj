@@ -12,7 +12,6 @@
 #include <sstream>
 
 // Initialize buffers so currentBoard/currentRoom are populated.
-// Use setMenu() to populate currentBoard with the menu template on construction.
 Screen::Screen() {
     setMenu();
 
@@ -53,31 +52,18 @@ void Screen::clearAndDeleteItems() {
     items.clear();
 }
 
-void Screen::copyTemplateToCurrentRoom(const char* const roomTemplate[]) {
-    for (int i = 0; i < MAX_Y; ++i) {
-        memcpy(currentRoom[i], roomTemplate[i], MAX_X + 1);
-    }
-}
-
 void Screen::applyRoomDefaultColors(int nRoom) {
-    // set per-cell color to the room default (or uncolored if roomUseColor is false)
+    // choose room default color (index is 0-based)
     Color roomDefault = Color::Gray;
 
     if (nRoom >= 0 && nRoom < ROOM_COUNT) {
         // Special-case: always render room 3 (index 2) with its configured default (Black)
         // even when coloring is globally turned off for other rooms.
-        if (nRoom == 2) {
+        if (nRoom == 2 || roomUseColor[nRoom]) {
             roomDefault = roomDefaultColor[nRoom];
-        }
-        else if (roomUseColor[nRoom]) {
-            roomDefault = roomDefaultColor[nRoom];
-        }
-        else {
+        } else {
             roomDefault = Color::Gray;
         }
-    }
-    else {
-        roomDefault = Color::Gray;
     }
 
     for (int y = 0; y < MAX_Y; y++) {
@@ -109,7 +95,7 @@ void Screen::populateLiveItemsFromRoom(int nRoom) {
                 changePixelInRoom(pos, ' ');
                 break;
             }
-            case '?': { // riddle tile
+            case '?': { // riddle
                 // choose the next riddle for this room (if available)
                 const auto& vec = getRiddlesForRoom(nRoom);
                 string question, answer;
@@ -497,10 +483,18 @@ void Screen::printRoom(Color defaultCol)const {
 }
 
 
-// Screen.cpp - modified printPlayersinfo to display each player's numeric score after hearts.
-// Replace the existing function body with this.
+
 void Screen::printPlayersinfo() const {
-    Point dis = searchChar('L'); // legend top-left marker
+    Point dis(-1, -1);
+    for (int y = 0; y < MAX_Y; y++) {
+        for (int x = 0; x < MAX_X; x++) {
+            if (currentRoom[y][x] == 'L'){
+                dis = { x, y };
+				break;
+		    }
+        }
+    }
+                                                                                    
     if (dis.getX() < 0 || dis.getY() < 0 || !registeredPlayers || registeredPlayerCount <= 0) return;
 
     const int startX = dis.getX();
@@ -567,55 +561,11 @@ void Screen::printPlayersinfo() const {
 }
 
 
-// Function to search for a specific character on the board delete if there are duplicates
-// Fix duplicates of character `c` in the currentRoom/currentBoard.
-// Leaves the last occurrence and replaces earlier duplicates with a space.
-void Screen::fixChar(char c) {
-    bool found = false;
-    Point res(-1, -1);
-
-    for (int y = 0; y < MAX_Y; y++) {
-        for (int x = 0; x < MAX_X; x++) {
-            if (currentRoom[y][x] == c) {
-                if (!found) {
-                    res = Point(x, y);
-                    found = true;
-                } else {
-                    // remove the previously recorded occurrence (replace with a single space)
-                    int px = res.getX();
-                    int py = res.getY();
-                    if (px >= 0 && px < MAX_X && py >= 0 && py < MAX_Y) {
-                        currentRoom[py][px] = ' ';
-                        currentBoard[py][px] = ' ';
-                    }
-                    // record the new occurrence
-                    res = Point(x, y);
-                }
-            }
-        }
-    }
-}
-
-// Function to search for a specific character on the board and return its position (if found)
-Point Screen::searchChar(char c) const {
-    // Loop through all rows and columns to find the character c
-    Point res = { -1, -1 };
-    for (int y = 0; y < MAX_Y; y++) {
-        for (int x = 0; x < MAX_X; x++) {
-            if (currentRoom[y][x] == c) {
-                res = { x, y };
-            }
-        }
-    }
-    return res;
-}
-
 void Screen::setRoom(int nRoom) {
-    currentRoomIndex = nRoom - 1;
     if (nRoom >= 1 && nRoom <= static_cast<int>(gameRoomsData.size())
-        && !gameRoomsData[currentRoomIndex].empty()) {
+        && !gameRoomsData[nRoom - 1].empty()) {
         // copy lines into currentRoom (pad or truncate to MAX_X)
-        const vector<string>& tmpl = gameRoomsData[currentRoomIndex];
+        const vector<string>& tmpl = gameRoomsData[nRoom - 1];
         for (int r = 0; r < MAX_Y; ++r) {
             string line;
             if (r < static_cast<int>(tmpl.size()))
@@ -637,10 +587,12 @@ void Screen::setRoom(int nRoom) {
     }
     // clear opened doors for the new room
     clearOpenedDoors();
-    currentRoomIndex = nRoom - 1;
 
     // Delete any existing live items before loading a new room
     clearAndDeleteItems();
+
+    // set the index once (used by lighting and other helpers)
+    currentRoomIndex = nRoom - 1;
 
     applyRoomDefaultColors(currentRoomIndex);
 
@@ -652,7 +604,7 @@ void Screen::setRoom(int nRoom) {
     map<char, vector<pair<int, bool>>> doorReqMap;
 
     if (nRoom == 1) {
-        // Room1: door '1' opens with key (legacy)
+        // Room1: door '1' opens with key 
         doorModeMap['1'] = Door::OpenMode::KeyOnly;
     }
     else if (nRoom == 2) {
@@ -670,7 +622,7 @@ void Screen::setRoom(int nRoom) {
         if (!it) continue;
         Door* d = dynamic_cast<Door*>(it);
         if (!d) continue;
-        char digit = d->getCh(); // the char used when the door was created (e.g., '1','2',...)
+        char digit = d->getCh(); // the char used when the door was created 
         auto mIt = doorModeMap.find(digit);
         if (mIt != doorModeMap.end()) {
             d->setOpenMode(mIt->second);
@@ -992,4 +944,21 @@ void Screen::resetAllScores() {
     }
 }
 
-// update setScoreBoard to include per-player scores
+const vector<pair<string, string>>& Screen::getRiddlesForRoom(int roomIndex1Based) const {
+    static const vector<pair<string, string>> emptyVec;
+    auto it = riddlesQA.find(roomIndex1Based);
+    return (it != riddlesQA.end()) ? it->second : emptyVec;
+}
+
+string Screen::getRiddleQuestion(int roomIndex1Based) const {
+    auto it = riddlesQA.find(roomIndex1Based);
+    if (it == riddlesQA.end() || it->second.empty()) return string();
+    return it->second.front().first;
+}
+
+string Screen::getRiddleAnswer(int roomIndex1Based) const {
+    auto it = riddlesQA.find(roomIndex1Based);
+    if (it == riddlesQA.end() || it->second.empty()) return string();
+    return it->second.front().second;
+}
+

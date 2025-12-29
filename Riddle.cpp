@@ -5,9 +5,7 @@ void Riddle::onStep(Player& player, Screen& screen)  {
     if (answered)
         return;
 
-    // Show the riddle board and the specific question for this Riddle instance.
-    // Screen::showRiddleQuestion overlays the instance question so multiple '?'
-    // tiles can display different questions.
+    
     screen.showRiddleQuestion(q);
     screen.printBoard();
     const int posY = 15;

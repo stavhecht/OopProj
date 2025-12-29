@@ -6,6 +6,11 @@ ROOM:2
 Q:Who is the president of the US?
 A:trump
 
-ROOM:1
+ROOM:3
 Q:When Israel established?
 A:1948
+
+ROOM:3
+Q:What five-letter word becomes shorter when you add two letters to it?
+A:short
+

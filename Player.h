@@ -61,7 +61,6 @@ public:
 
 	// Launch API used by springs and collisions
 	void applyLaunch(int speed, Direction dir, int duration);
-	int currentForce() const { return (launchRemaining > 0 && launchSpeed > 0) ? launchSpeed : 1; }
 
 	// Scoring API
 	int getScore() const { return score; }
@@ -77,6 +76,9 @@ private:
 
 	bool canMoveTo(const Point& next) const;
 	void updateTorchOnMove(const Point& next);
+
+	// previously public, moved to private because only Player internals use it
+	int currentForce() const { return (launchRemaining > 0 && launchSpeed > 0) ? launchSpeed : 1; }
 
 	static Point nextPointFor(const Player& p);
 	static Point stepPointFrom(const Point& pt, Direction dir);

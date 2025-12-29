@@ -1,11 +1,12 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Console.h"
 #include "Direction.h"
 #include <utility>
+using namespace std;
 
-class Screen; // Forward declaration
-class Item;   // forward declare Item for operator=
+class Screen; 
+class Item;   
 
 class Point {
     int x = 1, y = 1;
@@ -51,7 +52,7 @@ public:
     void setCh(char c) { ch = c; }
     void setColor(Color c) { color = c; }
 
-    // Assign appearance from an Item (copies glyph + color only — preserves x/y)
+    // Assign appearance from an Item (copies glyph + color only ï¿½ preserves x/y)
     Point& operator=(const Item& item);
     Point& operator=(const Point& other);
     Point& operator=(const Item* item) { if (item) return operator=(*item); return *this; }
@@ -64,8 +65,10 @@ public:
         return !(*this == other);
     }
 
-    std::pair<bool, Point> ItemInRadios(Screen& screen, int radius) const;
-    std::pair<bool, Point> SteppedOnAdjacent(Screen& screen) const;
-    std::pair<bool, Point> PlaceToDrop(Screen& screen, int radius) const;
+    pair<bool, Point> ItemInRadios(Screen& screen, int radius) const;
+    pair<bool, Point> PlaceToDrop(Screen& screen, int radius) const;
 
+private:
+    // adjacency helper kept private: not referenced by other translation units
+    pair<bool, Point> SteppedOnAdjacent(Screen& screen) const;
 };

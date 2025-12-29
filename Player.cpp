@@ -44,9 +44,7 @@ Point Player::stepPointFrom(const Point& pt, Direction dir) {
     return np;
 }
 
-// Check whether `other` is adjacent to `target` and is attempting to push into `target`.
-// We consider "attempting to push" when other.getPos().move() would equal the target (i.e. they
-// have a non-STAY direction toward the target). Using a copy of the Point avoids side-effects.
+
 bool Player::otherIsPushingTowards(const Player& other, const Point& target) {
     if (!other.isVisible()) return false;
     const Point otherPos = other.getPos();
@@ -80,9 +78,7 @@ int Player::computeCombinedForceForPush(Screen& screen, const Player& self, cons
     return combined;
 }
 
-// Try to perform the push (check canPushGroup + pushGroup) and, on success, update player's
-// position, torch and visuals. Returns true if push succeeded and player moved into `next`.
-// launchRemainingRef is nullable: caller may pass nullptr when not relevant.
+
 bool Player::tryPerformPush(Screen& screen, Player& player, const Point& next, Direction pushDir, int combinedForce, int launchSpeedIfAny, int* launchRemainingRef) {
     if (!Obstacle::canPushGroup(screen, next, pushDir, combinedForce))
         return false;

@@ -117,23 +117,37 @@ pair<bool, Point> Point::SteppedOnAdjacent(Screen& screen) const {
 }
 
 pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
-	for (int dy = -radius; dy <= radius; dy++) {
-		for (int dx = -radius; dx <= radius; dx++) {
-			if(dx == 0 && dy == 0)
-				continue; // skip own position
-			int newX = x + dx;
-			int newY = y + dy;
 
-            // bounds-check
-            if (newX < 0 || newX >= Screen::MAX_X || newY < 0 || newY >= Screen::MAX_Y)
-                continue;
+	const int orth_dx[4] = { 0, -1, 0, 1 };
+	const int orth_dy[4] = { 1, 0, -1, 0 };
 
-			Point targetPoint(newX, newY);
-			if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
-				return make_pair(true, targetPoint);
-			}
+	for (int i = 0; i < 4; i++) {
+		int nx = x + orth_dx[i];
+		int ny = y + orth_dy[i];
+
+		if (nx < 0 || nx >= Screen::MAX_X || ny < 0 || ny >= Screen::MAX_Y)
+			continue;
+		Point targetPoint(nx, ny);
+		if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
+			return make_pair(true, targetPoint);
 		}
 	}
+	
+	const int diag_dx[4] = { -1, 1, 1, -1 };
+	const int diag_dy[4] = { -1, -1, 1, 1 };
+
+	for (int i = 0; i < 4; i++) {
+		int nx = x + diag_dx[i];
+		int ny = y + diag_dy[i];
+
+		if (nx < 0 || nx >= Screen::MAX_X || ny < 0 || ny >= Screen::MAX_Y)
+			continue;
+		Point targetPoint(nx, ny);
+		if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
+			return make_pair(true, targetPoint);
+		}
+	}
+	
 	return make_pair(false, Point(-1, -1));
 }
 

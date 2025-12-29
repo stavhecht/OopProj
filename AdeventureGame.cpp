@@ -72,7 +72,6 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
             size_t e = s.find_last_not_of(" \t");
             if (b == string::npos) return string();
             string out = s.substr(b, e - b + 1);
-            // strip trailing CR (Windows files)
             if (!out.empty() && out.back() == '\r') out.pop_back();
             return out;
         };

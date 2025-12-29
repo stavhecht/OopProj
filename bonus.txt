@@ -1,2 +1,6 @@
+Exercise 1:
 Color bonus
 Torch light feature, lights up dark areas as player move. 
+
+Exercise 2:
+hearts display on statscreen

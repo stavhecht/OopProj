@@ -134,7 +134,6 @@
     <ClCompile Include="CollectableItems.cpp" />
     <ClCompile Include="Console.cpp" />
     <ClCompile Include="Door.cpp" />
-    <ClCompile Include="Item.cpp" />
     <ClCompile Include="Obstacle.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Point.cpp" />
