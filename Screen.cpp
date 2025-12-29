@@ -272,10 +272,33 @@ void Screen::setGamePaused() {
 }
 
 void Screen::setErrorBoard(int nRoom) {
+    // copy template first
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], screenErrorBoard[i], MAX_X + 1);
     }
-	currentBoard[7][37] = '0' + nRoom; // write room number into the board
+
+    // Construct a human-friendly message. nRoom values:
+    // 1..3 -> room file index that failed, 4 -> riddles.txt failed, otherwise -> generic.
+    string msg;
+    if (nRoom >= 1 && nRoom <= 3) {
+        msg = "Error Loading Room " + to_string(nRoom);
+    }
+    else if (nRoom == 4) {
+        msg = "Error Loading file: riddles.txt";
+    }
+    else {
+        msg = "Error Loading resources";
+    }
+
+    // Decorate message for readability and center it on the board (row 7 is legacy location).
+    string decorated = "||    " + msg + "    ||";
+    int row = 7;
+    if (row < 0 || row >= MAX_Y) return;
+
+    int col = (MAX_X - static_cast<int>(decorated.size())) / 2;
+    if (col < 0) col = 0;
+
+    writeTextToBoard(row, col, decorated);
 }
 
 

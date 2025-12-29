@@ -120,7 +120,7 @@ private:
 		 "W                                                                              W", // 4
 		 "W                                                                              W", // 5
 		 "W                                                                              W", // 6
-		 "W                            Screen #  is not loaded                           W", // 7
+		 "W                                                                              W", // 7
 		 "W                                                                              W", // 9
 		 "W                                                                              W", // 9
 		 "W                                                                              W", // 10
