@@ -1,0 +1,11 @@
+ROOM:1
+Q:How many naz is the course?
+A:4
+
+ROOM:2
+Q:Who is the president of the US?
+A:trump
+
+ROOM:1
+Q:When Israel established?
+A:1948

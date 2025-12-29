@@ -253,6 +253,16 @@ void Screen::setRiddle() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], riddleBoard[i], MAX_X + 1);
     }
+
+    // If we have a riddle for the current room, write it into the board
+    int roomIdx1 = currentRoomIndex + 1; // Screen stores 0-based
+    string q = getRiddleQuestion(roomIdx1);
+    if (!q.empty()) {
+        // center the question on row 6
+        int col = (MAX_X - static_cast<int>(q.size())) / 2;
+        if (col < 1) col = 1;
+        writeTextToBoard(6, col, q);
+    }
 }
 
 void Screen::setGamePaused() {

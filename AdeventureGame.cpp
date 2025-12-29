@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <map>
 
 
 
@@ -39,7 +40,6 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
     const int ROOM_COUNT = 3;
     mapData.resize(ROOM_COUNT); // assuming 3 rooms
 
-    bool anyLoaded = true;
     for (int i = 0; i < ROOM_COUNT; i++) {
         string filename = "adv-world_0" + to_string(i + 1) + ".screen.txt";
         fstream file(filename);
@@ -80,6 +80,67 @@ bool AdeventureGame::init()
         }
 		
 		return true;
+    }
+
+    
+    // room: <n>\n
+    // q: <question>\n
+    // a: <answer>\n
+    // blank line separates entries.
+    {
+        map<int, pair<string, string>> qa;
+        ifstream rf("riddles.txt");
+        if (rf.is_open()) {
+            string line;
+            int room = -1;
+            string q, a;
+            auto trim = [](string s){
+                size_t b = s.find_first_not_of(" \t");
+                size_t e = s.find_last_not_of(" \t");
+                if (b == string::npos) return string();
+                string out = s.substr(b, e - b + 1);
+                // strip trailing CR (Windows files)
+                if (!out.empty() && out.back() == '\r') out.pop_back();
+                return out;
+            };
+            auto commit = [&]() {
+                if (room >= 1 && room <= 3 && !q.empty() && !a.empty()) {
+                    qa[room] = make_pair(q, a);
+                }
+                room = -1; q.clear(); a.clear();
+            };
+            while (std::getline(rf, line)) {
+                line = trim(line);
+                if (line.empty()) { commit(); continue; }
+                // lowercase copy for case-insensitive matching
+                string lowerLine = line;
+                for (char &c : lowerLine) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
+                if (lowerLine.rfind("room:", 0) == 0) {
+                    commit();
+                    string num = trim(line.substr(5));
+                    try { room = stoi(num); } catch (...) { room = -1; }
+                } else if (lowerLine.rfind("room ", 0) == 0) {
+                    commit();
+                    string num = trim(line.substr(5));
+                    try { room = std::stoi(num); } catch (...) { room = -1; }
+                } else if (lowerLine.rfind("q:", 0) == 0) {
+                    q = trim(line.substr(2));
+                } else if (lowerLine.rfind("a:", 0) == 0) {
+                    a = trim(line.substr(2));
+                } else {
+                    // if line is just digits, treat as room indicator
+                    bool allDigits = !line.empty();
+                    for (char c : line) if (!isdigit(static_cast<unsigned char>(c))) { allDigits = false; break; }
+                    if (allDigits) {
+                        commit();
+                        try { room = std::stoi(line); } catch (...) { room = -1; }
+                    }
+                }
+            }
+            commit();
+            rf.close();
+            screen.setRiddlesQA(qa);
+        }
     }
 	return false;
 

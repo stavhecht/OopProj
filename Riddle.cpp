@@ -2,52 +2,83 @@
 #include "Console.h"
 
 void Riddle::onStep(Player& player, Screen& screen)  {
-	if (answered)
-		return;
+    if (answered)
+        return;
 
-	screen.setRiddle();
-	screen.printBoard();
-	const int posY = 15;
-	const int posX = 40;
+    screen.setRiddle();
+    screen.printBoard();
+    const int posY = 15;
+    const int posX = 41; // fixed column for answer input
 
-	while (true) {
-		gotoxy(posX, posY);
-		set_color(Color::LightYellow);
-		char answer = get_single_char();
-		cout << answer << flush;
-		
-		if (answer == '4') { // correct answer
-			player.addScore(50);
-			sleep_ms(500);
-			answered = true;
-			Point p = pos;
-			screen.changePixelInRoom(pos, ' ');
-			pos.setCh(' ');
-			screen.printRoom();
-			screen.removeItemAt(p);
-			return;
-		}
-		else if (answer == 27) {
-			screen.printRoom();
-			return;
-		}
-		else {
-			player.addScore(-20);
-			gotoxy(posX, posY);
-			cout << static_cast<char>(answer) << flush;
+    const int wrongAnswer = 26; 
+    
 
-			// provide brief feedback for wrong answer, then clear it so user can retry
-			gotoxy(posX, posY);
-			
+    // Fetch expected answer for this room
+    int roomIdx1 = screen.getCurrentRoomIndex() + 1;
+    string expected = screen.getRiddleAnswer(roomIdx1);
 
-			sleep_ms(500);
+    while (true) {
+        gotoxy(posX, posY);
+        set_color(Color::LightYellow);
 
-			// erase typed char and feedback
-			gotoxy(posX, posY);
-			cout << ' ' << flush;
-			
-		}
-	}
+        // Read user input line until ENTER or ESC
+        string input;
+        while (true) {
+            char ch = static_cast<char>(get_single_char());
+            if (ch == 27) { // ESC cancels
+                screen.printRoom();
+                return;
+            }
+            if (ch == '\r' || ch == '\n') {
+                break;
+            }
+            if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z') {
+                input.push_back(ch);
+                cout << ch << flush;
+            }
+        }
 
+        auto trim = [](string s){
+            size_t b = s.find_first_not_of(' ');
+            size_t e = s.find_last_not_of(' ');
+            if (b == string::npos) return string();
+            return s.substr(b, e - b + 1);
+        };
+        string ans = trim(input);
+        string exp = trim(expected);
 
+        // Case-insensitive compare
+        auto lower = [](string s){ for (char& c : s) c = static_cast<char>(tolower(static_cast<unsigned char>(c))); return s; };
+        if (!exp.empty() && lower(ans) == lower(exp)) {
+            player.addScore(50);
+            sleep_ms(500);
+            answered = true;
+            Point p = pos;
+            screen.changePixelInRoom(pos, ' ');
+            pos.setCh(' ');
+            screen.printRoom();
+            screen.removeItemAt(p);
+            return;
+        } else {
+            player.addScore(-20);
+            // brief feedback below the answer row
+            gotoxy(wrongAnswer, posY+2);
+            set_color(Color::LightRed);
+            cout << "Wrong answer, try again (ESC to cancel)" << flush;
+            sleep_ms(500);
+            // clear feedback line
+            gotoxy(wrongAnswer, posY+2);
+            set_color(Color::Gray);
+            cout << string(40, ' ') << flush;
+            reset_color();
+
+            // flush only the wrong input from the Answer line (preserve board edges)
+            gotoxy(posX, posY);
+            set_color(Color::Gray);
+            cout << string(input.size(), ' ') << flush;
+            reset_color();
+            // reposition cursor for next attempt
+            gotoxy(posX, posY);
+        }
+    }
 }

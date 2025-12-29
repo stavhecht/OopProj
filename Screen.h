@@ -31,6 +31,9 @@ private:
 	int currentRoomIndex = 0;
 	vector<vector<string>> gameRoomsData;
 
+	// Per-room riddle question/answer store (key = 1-based room index)
+	map<int, pair<string, string>> riddlesQA;
+
 	// Per-cell color buffer (keeps illumination persistent across redraws & pauses)
 	Color cellColor[MAX_Y][MAX_X];
 
@@ -174,7 +177,7 @@ private:
 		 "?                                                                              ?", // 3
 		 "?                                                                              ?", // 4
 		 "?                                                                              ?", // 5
-		 "?                          How many naz is this course?                        ?", // 6
+		 "?                                                                              ?", // 6
 		 "?                                                                              ?", // 7
 		 "?                                                                              ?", // 9
 		 "?                                                                              ?", // 9
@@ -321,6 +324,17 @@ public:
 	void setRiddle();
 	void setRoom(int nRoom);
 	void setErrorBoard(int nRoom);
+
+	// Riddle helpers
+	void setRiddlesQA(const map<int, pair<string, string>>& qa) { riddlesQA = qa; }
+	string getRiddleQuestion(int roomIndex1Based) const {
+		auto it = riddlesQA.find(roomIndex1Based);
+		return (it != riddlesQA.end()) ? it->second.first : string();
+	}
+	string getRiddleAnswer(int roomIndex1Based) const {
+		auto it = riddlesQA.find(roomIndex1Based);
+		return (it != riddlesQA.end()) ? it->second.second : string();
+	}
 	
 	// Score helpers
 	void addScoreToPlayer(int playerIndex, int delta);
