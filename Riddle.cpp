@@ -5,7 +5,10 @@ void Riddle::onStep(Player& player, Screen& screen)  {
     if (answered)
         return;
 
-    screen.setRiddle();
+    // Show the riddle board and the specific question for this Riddle instance.
+    // Screen::showRiddleQuestion overlays the instance question so multiple '?'
+    // tiles can display different questions.
+    screen.showRiddleQuestion(q);
     screen.printBoard();
     const int posY = 15;
     const int posX = 41; // fixed column for answer input
@@ -13,9 +16,8 @@ void Riddle::onStep(Player& player, Screen& screen)  {
     const int wrongAnswer = 26; 
     
 
-    // Fetch expected answer for this room
-    int roomIdx1 = screen.getCurrentRoomIndex() + 1;
-    string expected = screen.getRiddleAnswer(roomIdx1);
+    // Use the answer stored in this Riddle instance (each Riddle keeps its own QA)
+    string expected = a;
 
     while (true) {
         gotoxy(posX, posY);

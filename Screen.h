@@ -31,8 +31,9 @@ private:
 	int currentRoomIndex = 0;
 	vector<vector<string>> gameRoomsData;
 
-	// Per-room riddle question/answer store (key = 1-based room index)
-	map<int, pair<string, string>> riddlesQA;
+	// Per-room riddle question/answer store (key = 1-based room index).
+	// Allows multiple (question, answer) pairs per room.
+	map<int, vector<pair<string, string>>> riddlesQA;
 
 	// Per-cell color buffer (keeps illumination persistent across redraws & pauses)
 	Color cellColor[MAX_Y][MAX_X];
@@ -326,16 +327,31 @@ public:
 	void setErrorBoard(int nRoom);
 
 	// Riddle helpers
-	void setRiddlesQA(const map<int, pair<string, string>>& qa) { riddlesQA = qa; }
+	// Riddle helpers (multi per room)
+	void setRiddlesQA(const map<int, vector<pair<string, string>>>& qa) { riddlesQA = qa; }
+
+	// Return reference to vector of Q/A for a room (empty vector if none)
+	const vector<pair<string,string>>& getRiddlesForRoom(int roomIndex1Based) const {
+		static const vector<pair<string,string>> emptyVec;
+		auto it = riddlesQA.find(roomIndex1Based);
+		return (it != riddlesQA.end()) ? it->second : emptyVec;
+	}
+
+	// Convenience: return the first question for the room (used by setRiddle)
+	// Returns empty string if no riddle present.
 	string getRiddleQuestion(int roomIndex1Based) const {
 		auto it = riddlesQA.find(roomIndex1Based);
-		return (it != riddlesQA.end()) ? it->second.first : string();
+		if (it == riddlesQA.end() || it->second.empty()) return string();
+		return it->second.front().first;
 	}
+
+	// Convenience: return the first answer for the room (fallback for legacy code)
 	string getRiddleAnswer(int roomIndex1Based) const {
 		auto it = riddlesQA.find(roomIndex1Based);
-		return (it != riddlesQA.end()) ? it->second.second : string();
+		if (it == riddlesQA.end() || it->second.empty()) return string();
+		return it->second.front().second;
 	}
-	
+
 	// Score helpers
 	void addScoreToPlayer(int playerIndex, int delta);
 	int getPlayerScore(int playerIndex) const;
@@ -430,5 +446,9 @@ public:
 	// Non-const overload intentionally returns a reference so callers can push_back lines.
 	vector<vector<string>>& getGameRoomsData() { return gameRoomsData; }
 	const vector<vector<string>>& getGameRoomsData() const { return gameRoomsData; }
+
+	// Draw the riddle board and place a specific question (used by Riddle::onStep
+	// so each '?' tile can show its own question). This is a thread-safe (UI) helper:
+	void showRiddleQuestion(const string& question);
 };
 

@@ -55,9 +55,9 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
 
         file.close();
     }
-	// Load riddles
+	// Load riddles - allow multiple Q/A per room.
     {
-        map<int, pair<string, string>> qa;
+        map<int, vector<pair<string,string>>> qa;
         ifstream rf("riddles.txt");
         if (!rf.is_open()) {
             // signal error (4 == riddles file)
@@ -78,7 +78,7 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
         };
         auto commit = [&]() {
             if (room >= 1 && room <= 3 && !q.empty() && !a.empty()) {
-                qa[room] = make_pair(q, a);
+                qa[room].push_back(make_pair(q, a));
             }
             room = -1; q.clear(); a.clear();
         };
@@ -106,7 +106,7 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
                 for (char c : line) if (!isdigit(static_cast<unsigned char>(c))) { allDigits = false; break; }
                 if (allDigits) {
                     commit();
-                    try { room = std::stoi(line); } catch (...) { room = -1; }
+                    try { room = stoi(line); } catch (...) { room = -1; }
                 }
             }
         }

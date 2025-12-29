@@ -88,6 +88,9 @@ void Screen::applyRoomDefaultColors(int nRoom) {
 }
 
 void Screen::populateLiveItemsFromRoom(int nRoom) {
+    // track which riddle index we've assigned so far for this room while iterating
+    int riddleAssignIndex = 0;
+
     for (int y = 0; y < MAX_Y; y++) {
         for (int x = 0; x < MAX_X; x++) {
             char c = currentRoom[y][x];
@@ -107,9 +110,18 @@ void Screen::populateLiveItemsFromRoom(int nRoom) {
                 break;
             }
             case '?': { // riddle tile
-                auto* riddle = new Riddle(pos, '?', Color::LightAqua);
+                // choose the next riddle for this room (if available)
+                const auto& vec = getRiddlesForRoom(nRoom);
+                string question, answer;
+                if (!vec.empty()) {
+                    const auto& pr = vec[riddleAssignIndex % static_cast<int>(vec.size())];
+                    question = pr.first;
+                    answer = pr.second;
+                }
+                auto* riddle = new Riddle(pos, '?', Color::LightAqua, question, answer);
                 addItem(riddle);
                 changePixelInRoom(pos, ' ');
+                ++riddleAssignIndex;
                 break;
             }
             case '@': { // bomb
@@ -265,6 +277,23 @@ void Screen::setRiddle() {
     }
 }
 
+// Display the riddle board with the provided question centered (row 6).
+void Screen::showRiddleQuestion(const string& question) {
+    setRiddle();
+    const int row = 6;
+    const int interiorCol = 1;
+    const int interiorWidth = MAX_X - 2;
+    writeTextToBoard(row, interiorCol, string(interiorWidth, ' '));
+
+    if (!question.empty()) {
+        int col = (MAX_X - static_cast<int>(question.size())) / 2;
+        if (col < interiorCol) col = interiorCol;
+        writeTextToBoard(row, col, question);
+    }
+    // print the composed riddle board to the console
+    printBoard();
+}
+
 void Screen::setGamePaused() {
     for (int i = 0; i < MAX_Y; i++) {
         memcpy(currentBoard[i], gamePaused[i], MAX_X + 1);
@@ -277,8 +306,6 @@ void Screen::setErrorBoard(int nRoom) {
         memcpy(currentBoard[i], screenErrorBoard[i], MAX_X + 1);
     }
 
-    // Construct a human-friendly message. nRoom values:
-    // 1..3 -> room file index that failed, 4 -> riddles.txt failed, otherwise -> generic.
     string msg;
     if (nRoom >= 1 && nRoom <= 3) {
         msg = "Error Loading Room " + to_string(nRoom);
