@@ -1,8 +1,22 @@
 #include "Point.h"
 #include "Screen.h"
+#include "Item.h" 
+#include <iostream>
+
+Point& Point::operator=(const Point& other) {
+	if(this != &other) {
+		x = other.x;
+		y = other.y;
+		diff_x = other.diff_x;
+		diff_y = other.diff_y;
+		ch = other.ch;
+		color = other.color;
+	}
+	return *this;
+}
 
 
-void Point::draw(char c) {
+void Point::draw(char c) const {
 	gotoxy(x, y);
 	set_color(color);
 	std::cout << c << std::flush;
@@ -39,31 +53,87 @@ void Point::setDirection(Direction dir) {
 	}
 }
 
-std::pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
-	for (int dy = -radius; dy <= radius; ++dy) {
-		for (int dx = -radius; dx <= radius; ++dx) {
-			int newX = (x + dx + Screen::MAX_X) % (Screen::MAX_X+1);
-			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
-			Point targetPoint(newX, newY);
-			if (screen.isItem(targetPoint)) {
-				return std::make_pair(true, targetPoint);
-			}
-		}
-	}
-	return std::make_pair(false, Point(-1, -1));
+// Copy only appearance (pos + sign + color) from Item into this Point.
+Point& Point::operator=(const Item& item) {
+    Point ip = item.getPos(); 
+    ch = ip.getCh();
+    color = ip.getColor();
+    return *this;
 }
 
-std::pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
+pair<bool, Point> Point::ItemInRadios(Screen& screen, int radius) const {
+	// Search a square of side (2*radius+1) around this point, skipping own tile.
+	// Return position of first CollectableItems found.
 	for (int dy = -radius; dy <= radius; ++dy) {
 		for (int dx = -radius; dx <= radius; ++dx) {
-			int newX = (x + dx + Screen::MAX_X) % (Screen::MAX_X+1);
-			int newY = (y + dy + Screen::MAX_Y) % Screen::MAX_Y;
+			if (dx == 0 && dy == 0)
+				continue; // skip own position
+			int newX = x + dx;
+			int newY = y + dy;
+
+            // bounds-check: avoid out-of-range accesses on the Screen buffers
+            if (newX < 0 || newX >= Screen::MAX_X || newY < 0 || newY >= Screen::MAX_Y)
+                continue;
+
 			Point targetPoint(newX, newY);
-			if (screen.getCharAtcurrentBoard(targetPoint) == ' ') {
-				return std::make_pair(true, targetPoint);
+			Item* it = screen.peekItemAt(targetPoint);
+			if (!it)
+				continue;
+
+            // Only consider collectable items for this query
+            CollectableItems* ci = dynamic_cast<CollectableItems*>(it);
+            if (ci) {
+                return make_pair(true, targetPoint);
+            }
+		}
+	}
+	return make_pair(false, Point(-1, -1));
+}
+
+pair<bool, Point> Point::SteppedOnAdjacent(Screen& screen) const {
+    // Check four orthogonal neighbours (no diagonals) for SteppedOnItems.
+    const int dx[4] = { 0, 1, 0, -1 };
+    const int dy[4] = { -1, 0, 1, 0 };
+
+    for (int i = 0; i < 4; i++) {
+        int nx = x + dx[i];
+        int ny = y + dy[i];
+
+        if (nx < 0 || nx >= Screen::MAX_X || ny < 0 || ny >= Screen::MAX_Y)
+            continue;
+
+        Point target(nx, ny);
+        Item* it = screen.peekItemAt(target);
+        if (!it)
+            continue;
+
+        SteppedOnItems* si = dynamic_cast<SteppedOnItems*>(it);
+        if (si) {
+            return make_pair(true, target);
+        }
+    }
+
+    return make_pair(false, Point(-1, -1));
+}
+
+pair<bool, Point> Point::PlaceToDrop(Screen& screen, int radius) const {
+	for (int dy = -radius; dy <= radius; dy++) {
+		for (int dx = -radius; dx <= radius; dx++) {
+			if(dx == 0 && dy == 0)
+				continue; // skip own position
+			int newX = x + dx;
+			int newY = y + dy;
+
+            // bounds-check
+            if (newX < 0 || newX >= Screen::MAX_X || newY < 0 || newY >= Screen::MAX_Y)
+                continue;
+
+			Point targetPoint(newX, newY);
+			if (screen.getCharAtcurrentRoom(targetPoint) == ' ') {
+				return make_pair(true, targetPoint);
 			}
 		}
 	}
-	return std::make_pair(false, Point(-1, -1));
+	return make_pair(false, Point(-1, -1));
 }
 

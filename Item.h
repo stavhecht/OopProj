@@ -2,6 +2,7 @@
 #include "Console.h"    
 #include "Point.h"
 #include <iostream>
+using namespace std;
 
 class Player;
 class Screen;
@@ -9,16 +10,17 @@ class Screen;
 class Item {
 protected:
     Point pos;
-    char  ch;
-	Color color = Color::White;
 
 public:
-    Item(const Point& p, char c, Color col) : pos(p), ch(c), color(col) {}
+    Item(const Point& p, char c, Color col) : pos(p.getX(), p.getY(), c, col) {}
     virtual ~Item() = default;
 
     Point getPos() const { return pos; }
     void  setPos(const Point& p) { pos = p; }
-    char  getCh() const { return ch; }
+    char  getCh() const { return pos.getCh(); }
+    void draw() const { pos.draw(); }
+
+    virtual Item* clone() const { return new Item(*this); }
 
     // Called when something should happen:
     virtual void onPickUp(Player& player, Screen& screen) {}

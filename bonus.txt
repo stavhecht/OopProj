@@ -1,0 +1,2 @@
+Color bonus
+Torch light feature, lights up dark areas as player move. 

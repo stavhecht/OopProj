@@ -6,106 +6,55 @@
 #include "SteppedOnItems.h"
 #include "Console.h"
 #include "Door.h"
+#include "Riddle.h"
+#include "Spring.h"
+#include "Obstacle.h"
+#include "Switcher.h"
+#include "Bomb.h"
+#include <map>
 #include <vector>
+using namespace std;
+
 
 
 class Screen {
 public:
 	enum { MAX_X = 80, MAX_Y = 25 };
 	char currentBoard[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
-	char currentRoom[MAX_Y][MAX_X + 1] = {}; // +1 for null terminator
+	char currentRoom[MAX_Y][MAX_X + 1] = {}; 
+
 private:
-	std::vector<Item*> items;
+	vector<Item*> items;
+	vector<Point> openedDoors;
+	Player* registeredPlayers = nullptr;
+	int registeredPlayerCount = 0;
+	int currentRoomIndex = 0;
+	vector<vector<string>> gameRoomsData;
 
-	const char* gameRoom1[MAX_Y] = {
-		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 1
-			"WWWWW               WWWWWWWWW                                          W    WWWW", // 2
-			"WWWWW                                                 K                W    WWWW", // 3
-			"WWWWW                                                                  W    WWWW", // 4
-			"WWWWW                                                                  W    WWWW", // 5
-			"WWWWW                                                                  W    WWWW", // 6
-			"WWWWW                                                                       WWWW", // 7
-			"WWWWW               WWWWWWWWW                                               WWWW", // 8
-			"WWWWW               WWWWWWWWW                                               WWWW", // 9
-			"                                                                              1 ", // 10
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 11
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                               WWWW", // 12
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 13
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWW                                          W    WWWW", // 14
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 15
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 16
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 17
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 18
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 19
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 20
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW                     WWWWWWWWWWWWWWWW    WWWW", // 21
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW    WWWW", // 22
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW    WWWW", // 23
-			"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
-	};
+	// Per-room riddle question/answer store (key = 1-based room index)
+	map<int, pair<string, string>> riddlesQA;
 
-	// tabs removed and layout normalized; lines may be shorter than MAX_X but Screen::setRoomX will pad safely.
-	const char* gameRoom2[MAX_Y] = {
-	//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-		"WWWWWWWWWWWWW    WWWW                  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 1
-		"WWWWWWWWWWWWW    WWWWW                            WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 2
-		"WWWWWWWWWWWWW    WWWWW  WW                        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 3
-		"WWWWWWWWWWWWW    WWWWW  WW            WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 4
-		"WWWWWWWWWWWWW    WWWWWWWWWWWW         WW          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 5
-		"WWWWWWWWWWWWW    WWWWWWWWWWWW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 6
-		"W                   WWWW                            WWWW                       W", // 7
-		"W                                                   WWWW                       W", // 8
-		"W                                                   WWWW                       W", // 9
-		"W         WW        WWWWWWWW                        WWWW                       W", // 10
-		"W         WW        WWWWWWWW                        WWWW                       W", // 11
-		"W         WW        WWWWWWWW                        WWWW                       W", // 12
-		"W         WW        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 13
-		"W         WW        WWWWWWWW                        WWW              WWW       W", // 14
-		"W         WW  WWWWWWWWWWWWW                         WWW              WWW       W", // 15
-		"W         WWWWWWWWWWWWWWW                           WWW              W         W", // 16
-		"W         WWWWWWWWWWWWWWW                           WWW              W         W", // 17
-		"W                       W                           WWW              W         W", // 18
-		"W                       W                           WWW              W         W", // 19
-		"W                       W                           WWW              W         W", // 20
-		"W              2        WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW         W", // 21
-		"W                            WWW            WW              WW                 W", // 22
-		"W                            WW        WW              WW           WW         W", // 23
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
-	};
+	// Per-cell color buffer (keeps illumination persistent across redraws & pauses)
+	Color cellColor[MAX_Y][MAX_X];
 
-	
-	const char* gameRoom3[MAX_Y] = {
-	//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0 
-		"W                               W                                              W", // 1
-		"W  WWWWWWWWWWW  WWW      WWW   W   WWWWW   WWWWW   WWWW  W   WWWWWWWWWWWWWWW   W", // 2
-		"W  W        W   W        W     W   W   W       W     W   W   W             W   W", // 3
-		"W  W        W   WWWWWWW  W  WWWW   W   W  WWW  W  WWWW   W   W             W   W", // 4
-		"W  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW  W", // 5
-		"W                                                                              W", // 6
-		"W                                                                              W", // 7
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 8
-		"W                                                                              W", // 9
-		"W  W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W   W", // 10
-		"W  W   W   W   W   W   W   W       W   W   W       W       W       W   W       W", // 11
-		"W  W   WWWWW   WWWWW   WWWWW   WWWWW   WWW   WWWWW   WWWWW   WWWWW   WWWWW     W", // 12
-		"W  W                                                                           W", // 13
-		"W                                                                              W", // 14
-		"W                                                                              W", // 15
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 16
-		"W                                                                              W", // 17
-		"W                                                                              W", // 18
-		"W                                                                              W", // 19
-		"W                                                                              W", // 20
-		"W                                                                              W", // 21
-		"W                                                                              W", // 22
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 23
-		"WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24 
-	};
+	// Per-room default color data (index 1..3 used for rooms)
+	static constexpr int ROOM_COUNT = 3; // index 0 unused
+	Color roomDefaultColor[ROOM_COUNT];
+	bool roomUseColor[ROOM_COUNT]; // when false, room will be "uncolored" (uses uncolored default)
 
+	// Saved state when entering pause (so we can restore it exactly)
+	char savedRoom[MAX_Y][MAX_X + 1];
+	Color savedCellColor[MAX_Y][MAX_X];
+	bool hasSavedState = false;
+
+	// --- private helpers (extracted to keep setRoom / ctor logic clearer) ---
+	void clearAndDeleteItems();
+	void copyTemplateToCurrentRoom(const char* const roomTemplate[]);
+	void populateLiveItemsFromRoom(int nRoom);   // <-- updated: accept room number
+	void applyRoomDefaultColors(int nRoom);
+
+	// helper to write ASCII text into the mutable currentBoard safely
+	void writeTextToBoard(int row, int col, const string& text);
 
 	const char* winBoard[MAX_Y] = {
 		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
@@ -171,12 +120,12 @@ private:
 		 "W                                                                              W", // 4
 		 "W                                                                              W", // 5
 		 "W                                                                              W", // 6
-		 "W                            Screen #  is not good                             W", // 7
+		 "W                            Screen #  is not loaded                           W", // 7
 		 "W                                                                              W", // 9
 		 "W                                                                              W", // 9
 		 "W                                                                              W", // 10
 		 "W                                                                              W", // 11
-		 "W                      Press ENTER to go to the next stage                     W", // 12
+		 "W                               Press ESC to exit                              W", // 12
 		 "W                                                                              W", // 13
 		 "W                                                                              W", // 14
 		 "W                                                                              W", // 15
@@ -228,7 +177,7 @@ private:
 		 "?                                                                              ?", // 3
 		 "?                                                                              ?", // 4
 		 "?                                                                              ?", // 5
-		 "?                          How many naz is this course?                        ?", // 6
+		 "?                                                                              ?", // 6
 		 "?                                                                              ?", // 7
 		 "?                                                                              ?", // 9
 		 "?                                                                              ?", // 9
@@ -250,34 +199,6 @@ private:
 	};
 
 
-	/*const char* endLoadBoard[MAX_Y] = {
-		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-		 "Q==============================================================================Q", // 1
-		 "Q                                                                              Q", // 2
-		 "Q                                                                              Q", // 3
-		 "Q                                                                              Q", // 4
-		 "Q                                                                              Q", // 5
-		 "Q                    ||    ALL FILES HAVE BEEN LOADED    ||                    Q", // 6
-		 "Q                                                                              Q", // 7
-		 "Q                                                                              Q", // 9
-		 "Q                                                                              Q", // 9
-		 "Q                                                                              Q", // 10
-		 "Q                                                                              Q", // 11
-		 "Q                                                                              Q", // 12
-		 "Q                                                                              Q", // 13
-		 "Q                                                                              Q", // 14
-		 "Q                                                                              Q", // 15
-		 "Q                                                                              Q", // 16
-		 "Q                                                                              Q", // 17
-		 "Q                                                                              Q", // 18
-		 "Q                                                                              Q", // 19
-		 "Q                                                                              Q", // 20
-		 "Q                                                                              Q", // 21
-		 "Q                                                                              Q", // 22
-		 "Q==============================================================================Q", // 23
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
-	};*/
 
 	const char* manuBoard[MAX_Y] = {
 		// 01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -335,34 +256,7 @@ private:
 		  "W                          Good luck and have fun!                             W", // 23
 		  "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
 	};
-	/*const char* noFilesErrorBoard[MAX_Y] = {
-		//01234567890123456789012345678901234567890123456789012345678901234567890123456789
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW", // 0
-		 "Q==============================================================================Q", // 1
-		 "Q                                                                              Q", // 2
-		 "Q                                                                              Q", // 3
-		 "Q                                                                              Q", // 4
-		 "Q                                                                              Q", // 5
-		 "Q                                                                              Q", // 6
-		 "Q                      ||    Screen File is empty    ||                        Q", // 7
-		 "Q                                                                              Q", // 9
-		 "Q                         Add files in order to play                           Q", // 9
-		 "Q                                                                              Q", // 10
-		 "Q                                                                              Q", // 11
-		 "Q                                                                              Q", // 12
-		 "Q                                                                              Q", // 13
-		 "Q                                                                              Q", // 14
-		 "Q                                                                              Q", // 15
-		 "Q                                                                              Q", // 16
-		 "Q                                                                              Q", // 17
-		 "Q                        Press ESC to return to the Menu                       Q", // 18
-		 "Q                                                                              Q", // 19
-		 "Q                                                                              Q", // 20
-		 "Q                                                                              Q", // 21
-		 "Q                                                                              Q", // 22
-		 "Q==============================================================================Q", // 23
-		 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"  // 24
-	};*/
+	
 
 	const char* gamePaused[MAX_Y] = {
 		//   01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -385,7 +279,7 @@ private:
 			"W                                                                              W", // 16
 			"W                                                                              W", // 17
 			"W                                                                              W", // 18
-			"W                              PRESS ESC TO CONINUE                            W", // 19
+			"W                              PRESS ESC TO CONNOTE                            W", // 19
 			"W                           PRESS H TO GO BACK TO MENU                         W", // 20
 			"W                                                                              W", // 21
 			"W                                                                              W", // 22
@@ -397,12 +291,27 @@ private:
 
 public:
 	Screen();
+	~Screen();
+
 
 	Screen& operator=(Screen const& other);
 
 	Screen(const Screen& other);
 
-	
+	// color / cell helpers
+	void setCellColor(const Point& p, Color c) { if (p.getX() >= 0 && p.getX() < MAX_X && p.getY() >= 0 && p.getY() < MAX_Y) cellColor[p.getY()][p.getX()] = c; }
+	Color getCellColor(const Point& p) const { if (p.getX() >= 0 && p.getX() < MAX_X && p.getY() >= 0 && p.getY() < MAX_Y) return cellColor[p.getY()][p.getX()]; return Color::LightYellow; }
+	int getCurrentRoomIndex() const { return currentRoomIndex; }
+
+	// Per-room defaults
+	void setRoomDefaultColor(int roomIndex, Color c);
+	Color getRoomDefaultColor(int roomIndex) const;
+	void setRoomUseColor(int roomIndex, bool use);
+	bool isRoomUseColor(int roomIndex) const;
+
+	// Save/restore state used for pause/unpause
+	void saveStateForPause();
+	void restoreStateFromPause();
 
 	// choose screen
 	//int chooseRoom(std::vector<std::string> const, const int sumOfFiles);
@@ -411,43 +320,35 @@ public:
 	void setGuide();
 	void setLose();
 	void setWin();
-	void setScreenError();
 	void setGamePaused();
 	void setRiddle();
+	void setRoom(int nRoom);
+	void setErrorBoard(int nRoom);
 
-
-	void setRoom1();
-	void setRoom2();
-	void setRoom3();
-	// Sets the current board to the end load state
-	//void setEndLoad();
-
-
-	// Sets the current board to choose a screen state
-	//void setChooseScreen();
-
-	// Sets the current board to screen error state
+	// Riddle helpers
+	void setRiddlesQA(const map<int, pair<string, string>>& qa) { riddlesQA = qa; }
+	string getRiddleQuestion(int roomIndex1Based) const {
+		auto it = riddlesQA.find(roomIndex1Based);
+		return (it != riddlesQA.end()) ? it->second.first : string();
+	}
+	string getRiddleAnswer(int roomIndex1Based) const {
+		auto it = riddlesQA.find(roomIndex1Based);
+		return (it != riddlesQA.end()) ? it->second.second : string();
+	}
 	
+	// Score helpers
+	void addScoreToPlayer(int playerIndex, int delta);
+	int getPlayerScore(int playerIndex) const;
+	void resetAllScores();
 
-	// Sets the current board to no files Error state
-	//void setNoFilesError();
-
-	// Sets and fix the current screen
-	//bool setScreen(int i);
-
-	// Checks if a screen is valid 
-	//bool isScreenOk(int i);
-
-	void printBoard() const;
-	void printRoom() const;
+	void printBoard(Color col = Color::LightYellow) const;
+	void printRoom(Color col = Color::Gray) const;
 
 
 	// Searches for a specific character on the board
 	Point searchChar(char ch) const;
 
-	// Fix the current screen so all the components are valid
-	void fixBoard();
-
+	
 	// Fix a sepcific char on the screen ( deletes the bad ones )
 	void fixChar(char c);
 
@@ -463,43 +364,71 @@ public:
 	}
 
 	char getCharAtcurrentBoard(const Point& p) const {
-		char c = currentBoard[p.getY()][p.getX()];
 		return currentBoard[p.getY()][p.getX()];
 	}
 
-	char getCharFromOriginalRoom(const Point& p) const {
-		return currentRoom[p.getY()][p.getX()];
-	}
+	// Return the visible character at a room location. If a live Item occupies the tile
+	// return its character; otherwise return the template char.
+	char getCharAtcurrentRoom(const Point& p) const;
 
-	// Returns a newly-allocated CollectableItems* if player picks up an item at `p`.
-	// The item is removed from the activeCollectables in the loaded room.
+
+	void registerPlayers(Player* players, int count) { registeredPlayers = players; registeredPlayerCount = count; }
+	Player* getRegisteredPlayers() { return registeredPlayers; }
+	int getRegisteredPlayerCount() const { return registeredPlayerCount; }
+	
+	 // Hide any registered players whose positions are within `radius` of `center`.
+	void hidePlayersInRadius(const Point& center, int radius);
+
+
+	
 	Item* getItem(const Point& p);
 	void  addItem(Item* item) { items.push_back(item); }
 
 
-	// Active items for the currently loaded room.
-	// Stored by value to avoid needing virtual destructor on Item.
-
-
-public:
 	
 
+	
+	Item* peekItemAt(const Point& p) const;
 
 	void gobacktoMenu();
 
-	bool isItem(const Point& p) const {
-		char c = getCharFromOriginalRoom(p);
-		return (c == '@' || c == '*' || c == '/' ||
-			c == '\'' || c == 'K' || c == '?');
-	}
+	bool removeItemAt(const Point & p);
 
-	bool isDoor(const Point& p) const {
-		char c = getCharFromOriginalRoom(p);
-		return (c >= '1' && c <= '9');
-	}
+	bool isItem(const Point& p) const;
+
+	bool isDoor(const Point& p) const;
 
 	bool isWall(const Point& p) const {
-		return getCharFromOriginalRoom(p) == 'W';
+		return getCharAtcurrentRoom(p) == 'W' || getCharAtcurrentRoom(p) == 'L';
 	}
+
+	int getVisiblePlayerCount() const;
+
+	// Mark a door location as opened (persist for the current room)
+	void markDoorOpened(const Point& p) { openedDoors.push_back(p); }
+
+	// Query whether a door was opened at the given point (position equality)
+	bool isDoorOpenedAt(const Point& p) const;
+
+	// Clear opened-door registry (called when loading a new room)
+	void clearOpenedDoors() { openedDoors.clear(); }
+
+	// Called each game-loop tick to update armed bombs stored in `items`.
+	void updateBombs();
+
+		
+	// Check whether the provided switch requirements are satisfied in the current live items.
+    // Each requirement is (group == room number, requiredState).
+	bool areSwitchRequirementsSatisfied(const vector<pair<int, bool>>& reqs) const;
+
+	// Re-evaluate doors whose opening depends on switches. Called after switch toggles
+	// and after room wiring to auto-open SwitchesOnly doors that are already satisfied.
+	void evaluateDoorRequirements();
+	void printPlayersinfo()const;
+
+	// Allow external code to read / fill the per-room raw text data.
+	// Non-const overload intentionally returns a reference so callers can push_back lines.
+	vector<vector<string>>& getGameRoomsData() { return gameRoomsData; }
+	const vector<vector<string>>& getGameRoomsData() const { return gameRoomsData; }
 };
 

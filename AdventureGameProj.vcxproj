@@ -132,13 +132,17 @@
     <ClCompile Include="AdventureGameProj.cpp" />
     <ClCompile Include="Bomb.cpp" />
     <ClCompile Include="CollectableItems.cpp" />
+    <ClCompile Include="Console.cpp" />
     <ClCompile Include="Door.cpp" />
     <ClCompile Include="Item.cpp" />
+    <ClCompile Include="Obstacle.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Point.cpp" />
     <ClCompile Include="Riddle.cpp" />
     <ClCompile Include="Screen.cpp" />
+    <ClCompile Include="Spring.cpp" />
     <ClCompile Include="SteppedOnItems.cpp" />
+    <ClCompile Include="Switcher.cpp" />
     <ClCompile Include="Torch.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -149,12 +153,19 @@
     <ClInclude Include="Direction.h" />
     <ClInclude Include="Door.h" />
     <ClInclude Include="Item.h" />
+    <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Point.h" />
     <ClInclude Include="Riddle.h" />
     <ClInclude Include="Screen.h" />
+    <ClInclude Include="Spring.h" />
     <ClInclude Include="SteppedOnItems.h" />
+    <ClInclude Include="Switcher.h" />
     <ClInclude Include="Torch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="bonus.txt" />
+    <Text Include="readme.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
