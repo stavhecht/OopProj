@@ -32,6 +32,14 @@ void Riddle::onStep(Player& player, Screen& screen)  {
             if (ch == '\r' || ch == '\n') {
                 break;
             }
+            if(ch == '\b') { // Backspace
+                if (!input.empty()) {
+                    input.pop_back();
+                    // Move cursor back, print space, move back again
+                    cout << "\b \b" << flush;
+                }
+                continue;
+			}
             if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z') {
                 input.push_back(ch);
                 cout << ch << flush;
