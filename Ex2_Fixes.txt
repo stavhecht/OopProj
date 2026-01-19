@@ -1,0 +1,1 @@
+fixed code to support any number of rooms.
