@@ -1,9 +1,15 @@
 #include "AdeventureGame.h"
 #include "Console.h"
+#include "Riddle.h"
+#include "ReplayIO.h"
 #include <fstream>
 #include <vector>
 #include <string>
 #include <map>
+#include <ctime> 
+#include <cstdlib> 
+#include <chrono>
+
 
 
 
@@ -13,6 +19,7 @@ Point AdeventureGame::GetStartPosForRoom(int room, int playerIndex){
         return (playerIndex == 0) ? Point(10, 10, 0, 0, '$', Color::Red)
                                     : Point(15, 5, 0, 0, '&', Color::Blue);
     }
+
     else if (room == 2) {
         return (playerIndex == 0) ? Point(31, 3, 0, 0, '$', Color::Red)
                                     : Point(34, 3, 0, 0, '&', Color::Blue);
@@ -37,25 +44,31 @@ AdeventureGame::AdeventureGame()
 
 pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
     mapData.clear();
-    const int ROOM_COUNT = 3;
-    mapData.resize(ROOM_COUNT); // assuming 3 rooms
 
-    for (int i = 0; i < ROOM_COUNT; i++) {
+    // Attempt to load sequential room files named adv-world_01.screen.txt, adv-world_02.screen.txt, ...
+    // Stop when we encounter the first missing file. Require at least one room.
+    for (int i = 0; ; ++i) {
         string filename = "adv-world_0" + to_string(i + 1) + ".screen.txt";
         fstream file(filename);
 
         if (!file.is_open()) {
-            return make_pair(false, i+1);
+            if (i == 0) {
+                // Couldn't open the first room file -> error as before (1 == first room)
+                return make_pair(false, 1);
+            }
+            // otherwise break and accept the rooms that were loaded
+            break;
         }
 
+        mapData.emplace_back();
         string line;
         while (getline(file, line)) {
-            mapData[i].push_back(line);
+            mapData.back().push_back(line);
         }
-
         file.close();
     }
-	// Load riddles - allow multiple Q/A per room.
+
+    // Load riddles - allow multiple Q/A per room.
     {
         map<int, vector<pair<string,string>>> qa;
         ifstream rf("riddles.txt");
@@ -76,7 +89,8 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
             return out;
         };
         auto commit = [&]() {
-            if (room >= 1 && room <= 3 && !q.empty() && !a.empty()) {
+            // Support any room index (no fixed upper bound here)
+            if (room >= 1 && !q.empty() && !a.empty()) {
                 qa[room].push_back(make_pair(q, a));
             }
             room = -1; q.clear(); a.clear();
@@ -114,7 +128,7 @@ pair<bool, int> AdeventureGame::loadFiles(vector<vector<string>>& mapData) {
         screen.setRiddlesQA(qa);
     }
 
-    // All files loaded successfully
+    // All files loaded successfully (at least one)
     return make_pair(true, 0);
 }
 
@@ -193,11 +207,14 @@ void AdeventureGame::loadRoom(int currentRoom, const vector<bool>& playersMoved)
 {
     screen.setRoom(currentRoom);
 
+    // compute number of rooms from loaded data (dynamic)
+    const int roomCount = static_cast<int>(screen.getGameRoomsData().size());
+
     // compute start positions for the room (only for players with lives)
     Point startPos[2];
     const int playerCount = static_cast<int>(sizeof(players) / sizeof(players[0]));
 
-    if (currentRoom == 1 || currentRoom == 2 || currentRoom == 3) {
+    if (currentRoom >= 1 && currentRoom <= roomCount) {
         for (int i = 0; i < playerCount; ++i) {
             if (players[i].getLifes() > 0) {
                 startPos[i] = GetStartPosForRoom(currentRoom, i);
@@ -313,6 +330,10 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
                 playersMoved.resize(playerCount, false);
             playersMoved[i] = true;
 
+            if (activeIO) {
+                activeIO->logRoomChange(tickCounter, i, currentRoom + 1);
+            }
+
             // Advance room when there are no visible players left.
             if (screen.getVisiblePlayerCount() == 0) {
                 currentRoom++;
@@ -343,6 +364,9 @@ void AdeventureGame::processPlayersMovement(int& currentRoom, bool& changeRoom, 
                 playersMoved.resize(playerCount, false);
             playersMoved[i] = true;
 
+            if (activeIO) {
+                activeIO->logRoomChange(tickCounter, i, currentRoom + 1);
+            }
             // Advance room when there are no visible players left.
             if (screen.getVisiblePlayerCount() == 0) {
                 currentRoom++;
@@ -414,7 +438,27 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
                 if (!sItemAdj) continue;
 
                 // Only trigger when adjacency has just appeared (player moved next to it)
-                sItemAdj->onStep(p, screen);
+                // If it's a riddle and we're in loadMode+silent, auto-answer using stored answer
+                Riddle* riddle = dynamic_cast<Riddle*>(sItemAdj);
+                if (riddle && loadMode) {
+                    // Log that a riddle was triggered. In non-silent mode, onStep will handle UI.
+                    if (activeIO) {
+                        activeIO->logRiddle(tickCounter, screen.getCurrentRoomIndex(), riddle->getQuestion(), riddle->getAnswer(), true);
+                    }
+                    // In load mode we don't want to block for input; simulate correct answer by directly rewarding
+                    // Let Riddle::onStep handle visuals only in non-load mode
+                    if (!silentMode) {
+                        sItemAdj->onStep(p, screen);
+                    } else {
+                        // Simulate removal and scoring
+                        p.addScore(50);
+                        Point rp = riddle->getPos();
+                        screen.changePixelInRoom(rp, ' ');
+                        screen.removeItemAt(rp);
+                    }
+                } else {
+                    sItemAdj->onStep(p, screen);
+                }
             }
         }
 
@@ -425,6 +469,8 @@ void AdeventureGame::processSteppedOnInteractions(bool& changeRoom)
 
 void AdeventureGame::handleInput(bool& running, bool& changeRoom)
 {
+    // In replay modes (-save or -load), ignore all live input including ESC
+    if (activeIO) return;
     if (!check_kbhit())
         return;
 
@@ -483,11 +529,15 @@ void AdeventureGame::startNewGame()
     vector<bool> playersMoved(playerCount, false);
 
     screen.registerPlayers(players, playerCount);
+    tickCounter = 0;
 
     while (running) {
-        screen.updateBombs(); // update pending bombs
+        g_replay_tick = tickCounter;
 
-        // Detect which players lost a life this tick (consume the event via hasDied())
+        // 1. Update dynamic elements (Bombs)
+        screen.updateBombs();
+
+        // 2. Detect which players lost a life this tick
         vector<int> diedIndices;
         for (int i = 0; i < playerCount; i++) {
             if (players[i].hasDied()) {
@@ -495,14 +545,17 @@ void AdeventureGame::startNewGame()
             }
         }
 
-        // If any player died -> respawn them without reloading the room (keep room state)
+        // 3. Respawn players who died
         if (!diedIndices.empty()) {
             for (int idx : diedIndices) {
+                if (activeIO) activeIO->logLifeLost(tickCounter, idx);
+
                 if (players[idx].getLifes() > 0) {
                     Point sp = GetStartPosForRoom(currentRoom, idx);
                     players[idx] = sp;
                     players[idx].setVisible(true);
-                } else {
+                }
+                else {
                     players[idx].setVisible(false);
                     players[idx].setPos(Point(-1, -1));
                 }
@@ -516,20 +569,26 @@ void AdeventureGame::startNewGame()
             screen.printRoom();
         }
 
+        // 4. Handle Room Switching or Game Win
         if (changeRoom) {
-            if (currentRoom == 1 || currentRoom == 2 || currentRoom == 3) {
+            const int roomCount = static_cast<int>(screen.getGameRoomsData().size());
+            if (currentRoom >= 1 && currentRoom <= roomCount) {
                 loadRoom(currentRoom, playersMoved);
             }
-            else if (currentRoom > 3) {
+            else if (currentRoom > roomCount) {
                 // Game won!
                 screen.setWin();
                 screen.printBoard();
                 running = false;
-                while (true) {
-                    if (check_kbhit()) {
-                        char c = static_cast<char>(get_single_char());
-                        if (c == ESC) {
-                            break;
+
+                // In replay modes, do not wait for ESC
+                if (!activeIO) {
+                    while (true) {
+                        if (check_kbhit()) {
+                            char c = static_cast<char>(get_single_char());
+                            if (c == ESC) {
+                                break;
+                            }
                         }
                     }
                 }
@@ -540,74 +599,180 @@ void AdeventureGame::startNewGame()
             fill(playersMoved.begin(), playersMoved.end(), false);
         }
 
-        // Player movement and opened doors
+        // 5. Process Movement
         processPlayersMovement(currentRoom, changeRoom, playersMoved, running);
         if (changeRoom) {
             // reload next room on next iteration
             continue;
         }
 
-        // CHECK FOR STEPPED-ON INTERACTIONS AFTER MOVEMENT
+        // 6. Process Interactions (Stepped on items)
         processSteppedOnInteractions(changeRoom);
         if (changeRoom) {
             // next loop iteration will reload room
             continue;
         }
 
-        // Only check for game-over no visible players
+        // 7. Check Game Over (Loss) - No visible players left
         if (screen.getVisiblePlayerCount() == 0) {
             screen.setLose();
             screen.printBoard();
-            if (check_kbhit()) char c = get_single_char();
-            while (true) {
-                if (check_kbhit()) {
-                    char c = static_cast<char>(get_single_char());
-                    if (c == ESC) {
-                        running = false;
-                        break;
+            if (!activeIO) {
+                if (check_kbhit()) char c = get_single_char();
+                while (true) {
+                    if (check_kbhit()) {
+                        char c = static_cast<char>(get_single_char());
+                        if (c == ESC) {
+                            running = false;
+                            break;
+                        }
                     }
                 }
+            }
+            else {
+                running = false;
             }
         }
 
         if (!running)
             break; // Break out of the game loop
 
-        // Input handling (Pause menu, etc.)
-        handleInput(running, changeRoom);
-
-        sleep_ms(100);
-    }
-
-    // When startNewGame returns, control goes back to main menu loop.
-}
-
-void AdeventureGame::run() {
-    bool exitApp = init();
-
-    while (!exitApp) {
-        bool startGame = waitForMenuSelection(exitApp);
-        if (exitApp) {
-            break;
+        // 8. Handle Input (Save/Load/Normal)
+        // This is the critical fix: We call handleInputWithRecord regardless of loadMode.
+        // The function itself handles the distinction between reading from file vs keyboard.
+        if (activeIO) {
+            handleInputWithRecord(*activeIO, tickCounter, running, changeRoom);
+        }
+        else {
+            handleInput(running, changeRoom);
         }
 
+        // 9. Advance Tick and Sleep
+        tickCounter++;
+        g_replay_tick = tickCounter;
+
+        if (!silentMode) sleep_ms(100);
+    }
+}
+
+
+  
+
+void AdeventureGame::run(bool isLoadMode, bool isSaveMode, bool isSilentMode){
+    loadMode = isLoadMode;
+    silentMode = isSilentMode;
+
+    ReplayIO io;
+    activeIO = nullptr;
+
+    // 1. Setup ReplayIO
+    if (loadMode) {
+        if (!io.loadSteps("adv-world.steps")) {
+            std::cout << "Could not load adv-world.steps\n";
+            return;
+        }
+        activeIO = &io;
+        screen.setReplayIO(&io);
+        screen.setReplayTick(0);
+        if (io.getSeed() != 0) {
+            srand(static_cast<unsigned int>(io.getSeed()));
+        }
+    } else if (isSaveMode) {
+        long seed = static_cast<long>(std::chrono::system_clock::now().time_since_epoch().count());
+        io.setSeed(seed);
+        srand(static_cast<unsigned int>(seed));
+        activeIO = &io;
+        screen.setReplayIO(&io);
+        screen.setReplayTick(0);
+    }
+
+    bool exitApp = false;
+
+    // 2. Initialization
+    if (loadMode) {
+        init_console();
+        auto ok = loadFiles(screen.getGameRoomsData());
+        if (!ok.first) return;
+        
+        if (!silentMode) { 
+            clrscr(); 
+            hideCursor(); 
+        }
+    } else {
+        exitApp = init();
+    }
+
+    // 3. Main Loop
+    while (!exitApp) {
+        bool startGame = false;
+
+        if (loadMode) {
+            startGame = true;
+        } else {
+            startGame = waitForMenuSelection(exitApp);
+        }
+
+        if (exitApp) break;
+
         if (startGame) {
-            // Prepare players for a fresh game start without changing game-loop logic.
-            // Clear any leftover inventory, reset lifes and hide them (loadRoom will position/ show as needed).
             for (Player& p : players) {
                 CollectableItems* inv = p.takeInventory();
                 if (inv) delete inv;
-                p.resetLifes();            // reset life counters
-				p.resetScore();           // reset score
-                p.setVisible(false);      // will be positioned/shown by loadRoom
-                p.setPos(Point(-1, -1));  // keep off-screen until loadRoom runs
+                p.resetLifes();            
+                p.resetScore();           
+                p.setVisible(false);      
+                p.setPos(Point(-1, -1));  
             }
 
             startNewGame();
+
+            if (loadMode) {
+                int totalScore = players[0].getScore() + players[1].getScore();
+                io.logGameEnd(tickCounter, totalScore);
+                io.validateResult("adv-world.result");
+                exitApp = true; 
+            } else if (isSaveMode) {
+                io.saveSteps("adv-world.steps");
+                int totalScore = players[0].getScore() + players[1].getScore();
+                io.logGameEnd(tickCounter, totalScore);
+                io.saveResult("adv-world.result");
+            }
         }
     }
 
-    // final cleanup
-    cleanup_console();
-    clrscr();
+    activeIO = nullptr;
+    screen.setReplayIO(nullptr);
+
+    if (!loadMode) {
+        cleanup_console();
+        clrscr();
+    }
 }
+
+void AdeventureGame::handleInputWithRecord(ReplayIO& io, int tick, bool& running, bool& changeRoom)
+{
+    if (loadMode) {
+        auto steps = io.stepsAt(tick);
+        for (const auto& s : steps) {
+            if (s.player >= 0 && s.player < 2 && players[s.player].isVisible()) {
+                players[s.player].handleKeyPressed(s.key);
+            }
+        }
+        return;
+    }
+
+    if (!check_kbhit()) return;
+    // Drain all keys available this tick and record each owned key
+    while (check_kbhit()) {
+        char key = static_cast<char>(get_single_char());
+        if (key == ESC) continue; // ignore ESC entirely in save mode
+        for (int i = 0; i < 2; ++i) {
+            if (players[i].isVisible() && players[i].ownsKey(key)) {
+                players[i].handleKeyPressed(key);
+                io.recordStep(tick, i, key);
+            }
+        }
+    }
+}
+
+

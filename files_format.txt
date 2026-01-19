@@ -1,0 +1,20 @@
+Files format for adv-world.steps and adv-world.result
+
+adv-world.steps:
+- Format:
+SEED <number>
+<count>
+<tick> <player> <key>
+<tick> <player> <key>
+...
+
+(Note: The first line is slightly different in the implementation (raw number vs SEED keyword) but let's document what the code does or adapt it. The code `Steps.cpp` currently writes raw numbers. I should stick to `Steps.cpp` implementation or update it. `Steps.cpp` writes `randomSeed` newline `count` newline.)
+
+Let's update `files_format.txt` to reflect the actual `Results` format we just implemented.
+
+adv-world.result:
+- Lines record events using the keywords:
+  ROOM_CHANGE <tick> <player> <toRoom>
+  LIFE_LOST   <tick> <player>
+  RIDDLE      <tick> <room> |Q <question> |A <answer> |OK|FAIL
+  GAME_END    <tick> <totalScore>

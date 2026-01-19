@@ -1,5 +1,6 @@
 #include "Riddle.h"
 #include "Console.h"
+#include "ReplayIO.h"
 
 void Riddle::onStep(Player& player, Screen& screen)  {
     if (answered)
@@ -57,7 +58,12 @@ void Riddle::onStep(Player& player, Screen& screen)  {
 
         // Case-insensitive compare
         auto lower = [](string s){ for (char& c : s) c = static_cast<char>(tolower(static_cast<unsigned char>(c))); return s; };
-        if (!exp.empty() && lower(ans) == lower(exp)) {
+        bool correct = (!exp.empty() && lower(ans) == lower(exp));
+        // Log riddle via Screen-held ReplayIO (no globals)
+        if (screen.getReplayIO()) {
+            screen.getReplayIO()->logRiddle(screen.getReplayTick(), screen.getCurrentRoomIndex(), q, ans, correct);
+        }
+        if (correct) {
             player.addScore(50);
             sleep_ms(500);
             answered = true;

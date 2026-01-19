@@ -38,6 +38,10 @@ public:
 	CollectableItems* takeInventory();
 
 	void handleKeyPressed(char key);
+    // Return true if the given key belongs to this player's control set
+    bool ownsKey(char key) const;
+    // Force player direction (used by replay load mode)
+    void forceDirection(Direction dir);
 
 	Point getPos() const { return pos; }
 	// setPos preserves player's glyph/color; use operator=(Point) to replace entire appearance when needed
