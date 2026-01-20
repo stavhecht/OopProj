@@ -19,6 +19,15 @@ Point Player::nextPointFor(const Player& p) {
     return np;
 }
 
+bool Player::ownsKey(char key) const {
+    return findKeyIndex(key) < NUM_KEYS;
+}
+
+void Player::forceDirection(Direction dir) {
+    if (!visible) return;
+    pos.setDirection(dir);
+}
+
  bool Player::hasDied() {
     if (lifes < lastKnownlifes) {
         lastKnownlifes = lifes;

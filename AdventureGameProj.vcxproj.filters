@@ -60,6 +60,21 @@
     <ClCompile Include="Spring.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Boards.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Steps.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Results.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ReplayGlobals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ReplayIO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AdeventureGame.h">
@@ -110,9 +125,35 @@
     <ClInclude Include="Spring.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Boards.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Steps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Results.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ReplayIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ReplayGlobals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
     <Text Include="bonus.txt" />
+    <Text Include="files_format.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\adv-world.steps" />
+    <None Include="data\adv-world.result" />
+    <None Include="data\examples\adv-world.steps.example1" />
+    <None Include="data\examples\adv-world.result.example1" />
+    <None Include="data\examples\adv-world.steps.example2" />
+    <None Include="data\examples\adv-world.result.example2" />
+    <None Include="data\examples\adv-world.steps.example3" />
+    <None Include="data\examples\adv-world.result.example3" />
   </ItemGroup>
 </Project>

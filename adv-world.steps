@@ -1,0 +1,8 @@
+# adv-world.steps - example format
+# First line: random seed (0 = don't reseed)
+# Second line: number of step records
+# Following lines: <tick> <player> <keycode>
+# keycode is integer representation of char
+
+0
+0

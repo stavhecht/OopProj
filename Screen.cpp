@@ -5,6 +5,7 @@
 #include "Riddle.h"
 #include "Bomb.h"
 #include <cstring>
+#include "Boards.h"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -178,24 +179,23 @@ bool Screen::isRoomUseColor(int roomIndex) const {
 void Screen::saveStateForPause() {
     // save current room chars
     for (int y = 0; y < MAX_Y; ++y) {
-        memcpy(savedRoom[y], currentRoom[y], MAX_X + 1);
-        // save per-cell colors
+        memcpy(saved.room[y], currentRoom[y], MAX_X + 1);
         for (int x = 0; x < MAX_X; ++x) {
-            savedCellColor[y][x] = cellColor[y][x];
+            saved.colors[y][x] = cellColor[y][x];
         }
     }
-    hasSavedState = true;
+    saved.has = true;
 }
 
 void Screen::restoreStateFromPause() {
-    if (!hasSavedState) return;
+    if (!saved.has) return;
     for (int y = 0; y < MAX_Y; ++y) {
-        memcpy(currentRoom[y], savedRoom[y], MAX_X + 1);
+        memcpy(currentRoom[y], saved.room[y], MAX_X + 1);
         for (int x = 0; x < MAX_X; ++x) {
-            cellColor[y][x] = savedCellColor[y][x];
+            cellColor[y][x] = saved.colors[y][x];
         }
     }
-    hasSavedState = false;
+    saved.has = false;
 }
 
 // Iterate live items and update any armed Bombs. Explode bombs whose fuse reaches zero.
@@ -226,7 +226,7 @@ void Screen::updateBombs() {
 
 void Screen::setScoreBoard() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], scoreBoard[i], MAX_X + 1);
+        memcpy(currentBoard[i], Boards::scoreBoard[i], MAX_X + 1);
     }
 
     // Render per-player scores starting at row 6 (fits inside board)
@@ -243,13 +243,13 @@ void Screen::setScoreBoard() {
 
 void Screen::setMenu() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], manuBoard[i], MAX_X + 1);
+        memcpy(currentBoard[i], Boards::manuBoard[i], MAX_X + 1);
     }
 }
 
 void Screen::setRiddle() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], riddleBoard[i], MAX_X + 1);
+        memcpy(currentBoard[i], Boards::riddleBoard[i], MAX_X + 1);
     }
 
     // If we have a riddle for the current room, write it into the board
@@ -282,14 +282,14 @@ void Screen::showRiddleQuestion(const string& question) {
 
 void Screen::setGamePaused() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], gamePaused[i], MAX_X + 1);
+        memcpy(currentBoard[i], Boards::gamePaused[i], MAX_X + 1);
     }
 }
 
 void Screen::setErrorBoard(int nRoom) {
     // copy template first
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], screenErrorBoard[i], MAX_X + 1);
+        memcpy(currentBoard[i], Boards::screenErrorBoard[i], MAX_X + 1);
     }
 
     string msg;
@@ -318,14 +318,14 @@ void Screen::setErrorBoard(int nRoom) {
 
 void Screen::setGuide() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], guideBoard[i], MAX_X + 1); 
+        memcpy(currentBoard[i], Boards::guideBoard[i], MAX_X + 1); 
     }
 }
 
 
 void Screen::setWin() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], winBoard[i], MAX_X + 1);  
+        memcpy(currentBoard[i], Boards::winBoard[i], MAX_X + 1);  
     }
 
     // compute total score and write into the board near "Your Score:" (row 9)
@@ -341,7 +341,7 @@ void Screen::setWin() {
 
 void Screen::setLose() {
     for (int i = 0; i < MAX_Y; i++) {
-        memcpy(currentBoard[i], loseBoard[i], MAX_X + 1);  
+        memcpy(currentBoard[i], Boards::loseBoard[i], MAX_X + 1);  
     }
 
     if (registeredPlayers && registeredPlayerCount > 0) {
@@ -382,16 +382,7 @@ Screen::Screen(const Screen& other) {
     }
 
     // copy the pointer-based template boards (string literals) — shallow copy of pointers is correct
-    for (int i = 0; i < MAX_Y; ++i) {
-        winBoard[i] = other.winBoard[i];
-        scoreBoard[i] = other.scoreBoard[i];
-        screenErrorBoard[i] = other.screenErrorBoard[i];
-        loseBoard[i] = other.loseBoard[i];
-
-        manuBoard[i] = other.manuBoard[i];
-        guideBoard[i] = other.guideBoard[i];
-        gamePaused[i] = other.gamePaused[i];
-    }
+    // board templates are static (Boards namespace); no per-instance copy needed
 
     // copy game room source data (text files -> vector<string>)
     gameRoomsData = other.gameRoomsData;
@@ -416,12 +407,12 @@ Screen::Screen(const Screen& other) {
         for (int x = 0; x < MAX_X; ++x)
             cellColor[y][x] = other.cellColor[y][x];
 
-    hasSavedState = other.hasSavedState;
-    if (hasSavedState) {
+    saved.has = other.saved.has;
+    if (saved.has) {
         for (int y = 0; y < MAX_Y; ++y) {
-            memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
+            memcpy(saved.room[y], other.saved.room[y], MAX_X + 1);
             for (int x = 0; x < MAX_X; ++x)
-                savedCellColor[y][x] = other.savedCellColor[y][x];
+                saved.colors[y][x] = other.saved.colors[y][x];
         }
     }
 }
@@ -805,16 +796,7 @@ Screen& Screen::operator=(Screen const& other) {
     }
 
     // copy pointer-based board templates
-    for (int i = 0; i < MAX_Y; i++) {
-        winBoard[i] = other.winBoard[i];
-        scoreBoard[i] = other.scoreBoard[i];
-        screenErrorBoard[i] = other.screenErrorBoard[i];
-        loseBoard[i] = other.loseBoard[i];
-
-        manuBoard[i] = other.manuBoard[i];
-        guideBoard[i] = other.guideBoard[i];
-        gamePaused[i] = other.gamePaused[i];
-    }
+    // board templates are static (Boards namespace); no per-instance copy needed
 
     // copy game room source data
     gameRoomsData = other.gameRoomsData;
@@ -838,12 +820,12 @@ Screen& Screen::operator=(Screen const& other) {
         for (int x = 0; x < MAX_X; x++)
             cellColor[y][x] = other.cellColor[y][x];
 
-    hasSavedState = other.hasSavedState;
-    if (hasSavedState) {
+    saved.has = other.saved.has;
+    if (saved.has) {
         for (int y = 0; y < MAX_Y; ++y) {
-            memcpy(savedRoom[y], other.savedRoom[y], MAX_X + 1);
+            memcpy(saved.room[y], other.saved.room[y], MAX_X + 1);
             for (int x = 0; x < MAX_X; x++)
-                savedCellColor[y][x] = other.savedCellColor[y][x];
+                saved.colors[y][x] = other.saved.colors[y][x];
         }
     }
 

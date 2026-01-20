@@ -130,6 +130,7 @@
   <ItemGroup>
     <ClCompile Include="AdeventureGame.cpp" />
     <ClCompile Include="AdventureGameProj.cpp" />
+    <ClCompile Include="Boards.cpp" />
     <ClCompile Include="Bomb.cpp" />
     <ClCompile Include="CollectableItems.cpp" />
     <ClCompile Include="Console.cpp" />
@@ -137,6 +138,10 @@
     <ClCompile Include="Obstacle.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Point.cpp" />
+    <ClCompile Include="ReplayGlobals.cpp" />
+    <ClCompile Include="ReplayIO.cpp" />
+    <ClCompile Include="Results.cpp" />
+    <ClCompile Include="Steps.cpp" />
     <ClCompile Include="Riddle.cpp" />
     <ClCompile Include="Screen.cpp" />
     <ClCompile Include="Spring.cpp" />
@@ -146,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AdeventureGame.h" />
+    <ClInclude Include="Boards.h" />
     <ClInclude Include="Bomb.h" />
     <ClInclude Include="CollectableItems.h" />
     <ClInclude Include="Console.h" />
@@ -155,6 +161,10 @@
     <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Point.h" />
+    <ClInclude Include="ReplayGlobals.h" />
+    <ClInclude Include="ReplayIO.h" />
+    <ClInclude Include="Results.h" />
+    <ClInclude Include="Steps.h" />
     <ClInclude Include="Riddle.h" />
     <ClInclude Include="Screen.h" />
     <ClInclude Include="Spring.h" />
@@ -164,7 +174,18 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="bonus.txt" />
+    <Text Include="files_format.txt" />
     <Text Include="readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\adv-world.result" />
+    <None Include="data\adv-world.steps" />
+    <None Include="data\examples\adv-world.result.example1" />
+    <None Include="data\examples\adv-world.result.example2" />
+    <None Include="data\examples\adv-world.result.example3" />
+    <None Include="data\examples\adv-world.steps.example1" />
+    <None Include="data\examples\adv-world.steps.example2" />
+    <None Include="data\examples\adv-world.steps.example3" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
